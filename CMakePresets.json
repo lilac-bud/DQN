@@ -4,7 +4,6 @@
       {
         "name": "dqn",
         "displayName": "DQN",
-        "generator": "Ninja",
         "binaryDir": "${sourceDir}/build",
         "cacheVariables": {
           "CMAKE_BUILD_TYPE": "Release"
