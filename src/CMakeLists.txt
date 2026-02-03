@@ -1,0 +1,23 @@
+add_library(neural_network OBJECT)
+
+target_sources(neural_network
+	PRIVATE
+		neural_network/layers/Layer.cpp
+		neural_network/layers/LayerConv2D.cpp
+		neural_network/layers/LayerDense.cpp
+		neural_network/layers/LayerFlatten.cpp
+		neural_network/layers/LayerMaxPooling2D.cpp
+		neural_network/Model.cpp
+
+	PUBLIC
+		FILE_SET HEADERS
+		FILES
+			neural_network/layers/Layer.h
+			neural_network/layers/LayerConv2D.h
+			neural_network/layers/LayerDense.h
+			neural_network/layers/LayerFlatten.h
+			neural_network/layers/LayerMaxPooling2D.h
+			neural_network/Model.h
+)
+
+target_link_libraries(neural_network xtensor)
