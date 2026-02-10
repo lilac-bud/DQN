@@ -46,11 +46,13 @@ namespace nn
     public:
         LayerConv2D(std::size_t filters_number, std::vector<std::size_t> kernel_size, Padding padding);
         virtual void build(std::vector<std::size_t>& input_shape) override;
-        virtual void forward(xt::xarray<float>& inputs, std::map<const Layer*, xt::xarray<float>>* tape) const override;
         virtual void backward(std::map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
             xt::xarray<float>& deltas) const override;
         virtual void get_trainable_vars(std::vector<xt::xarray<float>*>& trainable_vars) override;
         virtual void print_trainable_vars() const override;
+
+    private:
+        virtual void forward(xt::xarray<float>& inputs) const override;
     };
 }
 

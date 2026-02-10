@@ -4,4 +4,5 @@ void nn::Layer::forward(xt::xarray<float>& inputs, std::map<const Layer*, xt::xa
 {
 	if (tape)
 		tape->insert({ this, inputs });
+	forward(inputs);
 }

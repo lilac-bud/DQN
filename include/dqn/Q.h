@@ -20,7 +20,7 @@ namespace dqn
 		static constexpr float priority_scale = 0.6f;
 		static constexpr float min_priority = 0.1f;
 		static const int update_target = 300;
-		static const int train_target = 10;
+		static const int train_local = 10;
 		static const std::size_t batch_size = 10;
 		static const std::size_t min_trace = 15;
 		static const std::size_t max_trace = 3000;

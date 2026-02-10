@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
                         The MIT License (MIT)
-        applies to: 
+    applies to: 
         - json, Copyright (c) 2013-2025 Niels Lohmann
 -----------------------------------------------------------------------------
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,13 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 -----------------------------------------------------------------------------
                         BSD 3-Clause License
-        applies to: 
-        - xtensor,	Copyright (c) 2016, Johan Mabille, Sylvain Corlay and Wolf Vollprecht
-			Copyright (c) 2016, QuantStack
-			All rights reserved.
-	- xtl,		Copyright (c) 2017, Sylvain Corlay, Johan Mabille and Wolf Vollprecht
-			Copyright (c) 2017, QuantStack
-			All rights reserved.
+    applies to: 
+        - xtensor,  Copyright (c) 2016, Johan Mabille, Sylvain Corlay 
+                    and Wolf Vollprecht
+                    Copyright (c) 2016, QuantStack
+                    All rights reserved.
+        - xtl,      Copyright (c) 2017, Sylvain Corlay, Johan Mabille 
+                    and Wolf Vollprecht
+                    Copyright (c) 2017, QuantStack
+                    All rights reserved.
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

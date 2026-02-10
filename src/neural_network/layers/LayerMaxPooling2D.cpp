@@ -14,9 +14,8 @@ void nn::LayerMaxPooling2D::build(std::vector<std::size_t>& input_shape)
 	outputs_shape = input_shape;
 }
 
-void nn::LayerMaxPooling2D::forward(xt::xarray<float>& inputs, std::map<const Layer*, xt::xarray<float>>* tape) const
+void nn::LayerMaxPooling2D::forward(xt::xarray<float>& inputs) const
 {
-	Layer::forward(inputs, tape);
 	std::vector<std::size_t> shape(outputs_shape);
 	shape.insert(shape.begin(), inputs.shape()[0]);
 	auto outputs = xt::xarray<float>::from_shape(shape);

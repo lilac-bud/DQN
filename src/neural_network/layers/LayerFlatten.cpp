@@ -9,9 +9,8 @@ void nn::LayerFlatten::build(std::vector<std::size_t>& input_shape)
 	input_shape = { outputs_number };
 }
 
-void nn::LayerFlatten::forward(xt::xarray<float>& inputs, std::map<const Layer*, xt::xarray<float>>* tape) const
+void nn::LayerFlatten::forward(xt::xarray<float>& inputs) const
 {
-	Layer::forward(inputs, tape);
 	inputs.reshape({ inputs.shape()[0], outputs_number });
 }
 

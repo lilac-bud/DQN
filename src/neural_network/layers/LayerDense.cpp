@@ -14,9 +14,8 @@ void nn::LayerDense::build(std::vector<std::size_t>& input_shape)
 	input_shape = { outputs_number };
 }
 
-void nn::LayerDense::forward(xt::xarray<float>& inputs, std::map<const Layer*, xt::xarray<float>>* tape) const
+void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 {
-	Layer::forward(inputs, tape);
 	auto linear_res = xt::sum(weights * xt::view(inputs, xt::all(), xt::newaxis(), xt::all()), { 2 }) + biases;
 	inputs = sigmoid(linear_res);
 }

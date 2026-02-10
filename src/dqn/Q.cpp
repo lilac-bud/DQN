@@ -39,7 +39,7 @@ private:
 	float eps = Q::max_eps;
 	float beta = Q::beta_min;
 	int update_count = Q::update_target;
-	int train_count = Q::train_target;
+	int train_count = Q::train_local;
 
 	ModelDueling model_local;
 	ModelDueling model_target;
@@ -54,7 +54,7 @@ private:
 	void save() const;
 	std::tuple<std::size_t, float> find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions,
 		const ModelDueling& model) const;
-	std::tuple<xt::xarray<std::size_t>, xt::xarray<float>> get_batch() const;
+	void get_batch(xt::xarray<std::size_t>& index_batch, xt::xarray<float>& importance_weights) const;
 	void train_model();
 	void accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, std::size_t trace_index, float importance_weight);
 	void global_update();
@@ -202,20 +202,19 @@ std::size_t dqn::Q::QPrivate::get_act(float prev_reward, const xt::xarray<float>
 	return act_index;
 }
 
-std::tuple<xt::xarray<std::size_t>, xt::xarray<float>> dqn::Q::QPrivate::get_batch() const
+void dqn::Q::QPrivate::get_batch(xt::xarray<std::size_t>& index_batch, xt::xarray<float>& importance_weights) const
 {
 	auto adapted_priorities = xt::adapt(priorities);
-	const xt::xarray<std::size_t> index_batch = xt::random::choice(xt::arange(trace.size()), Q::batch_size, adapted_priorities, false);
+	index_batch = xt::random::choice(xt::arange(trace.size()), Q::batch_size, adapted_priorities, false);
 	auto inter_res = xt::index_view(adapted_priorities, index_batch) / xt::sum(adapted_priorities) * trace.size();
-	const xt::xarray<float> importance_weights = xt::pow(inter_res, -beta) / xt::amax(inter_res);
-	return std::make_tuple(index_batch, importance_weights);
+	importance_weights = xt::pow(inter_res, -beta) / xt::amax(inter_res);
 }
 
 void dqn::Q::QPrivate::train_model()
 {
 	xt::xarray<std::size_t> index_batch;
 	xt::xarray<float> importance_weights;
-	std::tie(index_batch, importance_weights) = get_batch();
+	get_batch(index_batch, importance_weights);
 	const auto trainable_vars = model_local.get_trainable_vars();
 	xt::xarray<xt::xarray<float>> vars_change;
 #if USE_MULTITHREADING_IN_Q
@@ -275,7 +274,7 @@ void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate,
 		trace.erase(trace.begin());
 		priorities.erase(priorities.begin());
 	}
-	if (train_count < Q::train_target)
+	if (train_count < Q::train_local)
 	{
 		train_count++;
 		return;
