@@ -29,8 +29,7 @@ void nn::LayerMaxPooling2D::forward(xt::xarray<float>& inputs) const
 	inputs = outputs;
 }
 
-void nn::LayerMaxPooling2D::backward(std::unordered_map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
-	xt::xarray<float>& deltas) const
+void nn::LayerMaxPooling2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
 {
 	xt::xarray<float> inputs = tape[this];
 	for (std::size_t i = 0; i < outputs_shape[0]; i++)

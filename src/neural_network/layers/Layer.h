@@ -2,12 +2,22 @@
 #define NEURALNETWORK_LAYER_H
 
 #include <vector>
-#include <unordered_map>
 #include <xtensor/containers/xarray.hpp>
 #include <xtensor/core/xvectorize.hpp>
+#include "neural_network/utils/TapeFwd.h"
+#include "neural_network/utils/GradientMapFwd.h"
+#include "neural_network/utils/TrainableVarsMapFwd.h"
 
 namespace nn
 {
+	using TrainableVars = std::vector<xt::xarray<float>*>;
+
+	enum class TrainableVarsType
+	{
+		Weights,
+		Biases
+	};
+
 	class Layer
 	{
 	public:
@@ -23,12 +33,12 @@ namespace nn
 		static inline auto sigmoid_derivative = xt::vectorize(sigmoid_derivative_scalar);
 
 		virtual void build(std::vector<std::size_t>& input_shape) = 0;
-		virtual void backward(std::unordered_map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
-			xt::xarray<float>& deltas) const = 0;
-		virtual void get_trainable_vars(std::vector<xt::xarray<float>*>& trainable_vars) = 0;
+		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const = 0;
+		virtual void get_trainable_vars(TrainableVars& trainable_vars) = 0;
+		virtual void get_trainable_vars(TrainableVarsMap& trainable_vars_map) = 0;
 		virtual void print_trainable_vars() const = 0;
 
-		void forward(xt::xarray<float>& inputs, std::unordered_map<const Layer*, xt::xarray<float>>* tape) const;
+		void forward(xt::xarray<float>& inputs, Tape* tape) const;
 
 	private:
 		virtual void forward(xt::xarray<float>& inputs) const = 0;

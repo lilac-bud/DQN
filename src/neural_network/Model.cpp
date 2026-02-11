@@ -14,23 +14,33 @@ xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> act
 	return call_with_tape(state, actions, nullptr);
 }
 
-xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions,
-	std::unordered_map<const Layer*, xt::xarray<float>>* tape) const
+xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions, Tape* tape) const
 {
 	return call_with_tape(state, actions, tape);
 }
 
-std::vector<xt::xarray<float>*> nn::Model::get_trainable_vars() const
+nn::TrainableVars nn::Model::get_trainable_vars() const
 {
+	TrainableVarsMap trainable_vars_map;
+	for (auto& layer : layers)
+		layer->get_trainable_vars(trainable_vars_map);
 	std::vector<xt::xarray<float>*> trainable_vars;
-	for (auto layer = layers.rbegin(); layer != layers.rend(); layer++)
-		(*layer)->get_trainable_vars(trainable_vars);
+	for (auto i = trainable_vars_map.begin(); i != trainable_vars_map.end(); i++)
+		trainable_vars.push_back(i->second);
+	return trainable_vars;
+}
+
+nn::TrainableVars nn::Model::get_trainable_vars_ordered() const
+{
+	TrainableVars trainable_vars;
+	for (auto& layer : layers)
+		layer->get_trainable_vars(trainable_vars);
 	return trainable_vars;
 }
 
 void nn::Model::save_weights(const std::string filename) const
 {
-	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars();
+	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_ordered();
 	std::vector<xt::xarray<float>> weights;
 	for (auto& vars : trainable_vars)
 		weights.push_back(*vars);
@@ -46,7 +56,7 @@ void nn::Model::load_weights(const std::string filename) const
 	nlohmann::json json_weights;
 	in_file >> json_weights;
 	in_file.close();
-	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars();
+	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_ordered();
 	std::size_t weights_index = 0;
 	for (auto& w : json_weights)
 	{

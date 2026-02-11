@@ -45,22 +45,20 @@ void dqn::ModelDueling::build(std::vector<size_t> input_shape) const
 		layer->build(action_shape);
 }
 
-void dqn::ModelDueling::call_branch(const std::vector<nn::Layer*>& branch, xt::xarray<float>& inputs,
-	std::unordered_map<const nn::Layer*, xt::xarray<float>>* tape) const
+void dqn::ModelDueling::call_branch(const std::vector<nn::Layer*>& branch, xt::xarray<float>& inputs, nn::Tape* tape) const
 {
 	for (const nn::Layer* layer : branch)
 		layer->forward(inputs, tape);
 }
 
-void dqn::ModelDueling::get_gradient_from_branch(const std::vector<nn::Layer*>& branch, 
-	std::unordered_map<const nn::Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient, xt::xarray<float>& deltas) const
+void dqn::ModelDueling::get_gradient_from_branch(const std::vector<nn::Layer*>& branch, nn::Tape& tape, nn::GradientMap& gradient_map,
+	xt::xarray<float>& deltas) const
 {
 	for (auto layer = branch.rbegin(); layer != branch.rend(); layer++)
-		(*layer)->backward(tape, gradient, deltas);
+		(*layer)->backward(tape, gradient_map, deltas);
 }
 
-xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions,
-	std::unordered_map<const nn::Layer*, xt::xarray<float>>* tape) const
+xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions, nn::Tape* tape) const
 {
 	call_branch(conv_state_branch, state, tape);
 	call_branch(conv_actions_branch, actions, tape);
@@ -71,20 +69,26 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt
 	return value + advantage;
 }
 
-xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(std::unordered_map<const nn::Layer*, xt::xarray<float>>& tape,
-	xt::xarray<float> deltas) const
+xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const
 {
-	std::vector<xt::xarray<float>> gradient;
+	nn::GradientMap gradient_map;
 	deltas = nn::Layer::sigmoid_derivative(deltas);
 	auto& value_deltas = deltas;
 	xt::xarray<float> advantage_deltas = deltas;
-	get_gradient_from_branch(advantage_branch, tape, gradient, advantage_deltas);
-	get_gradient_from_branch(value_branch, tape, gradient, value_deltas);
+
+	get_gradient_from_branch(advantage_branch, tape, gradient_map, advantage_deltas);
+	get_gradient_from_branch(value_branch, tape, gradient_map, value_deltas);
+
 	xt::xarray<float> state_deltas = xt::sum(xt::view(value_deltas, xt::all(), xt::newaxis()) +
 		xt::view(advantage_deltas, xt::all(), xt::range(0, value_deltas.shape()[1])), { 1 });
 	xt::xarray<float> actions_deltas = xt::view(advantage_deltas, xt::all(),
 		xt::range(value_deltas.shape()[1], advantage_deltas.shape()[1]));
-	get_gradient_from_branch(conv_actions_branch, tape, gradient, actions_deltas);
-	get_gradient_from_branch(conv_state_branch, tape, gradient, state_deltas);
+
+	get_gradient_from_branch(conv_actions_branch, tape, gradient_map, actions_deltas);
+	get_gradient_from_branch(conv_state_branch, tape, gradient_map, state_deltas);
+
+	std::vector<xt::xarray<float>> gradient;
+	for (auto i = gradient_map.begin(); i != gradient_map.end(); i++)
+		gradient.push_back(i->second);
 	return xt::adapt(gradient);
 }

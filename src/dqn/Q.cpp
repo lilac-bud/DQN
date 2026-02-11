@@ -215,7 +215,7 @@ void dqn::Q::QPrivate::train_model()
 	xt::xarray<std::size_t> index_batch;
 	xt::xarray<float> importance_weights;
 	get_batch(index_batch, importance_weights);
-	const auto trainable_vars = model_local.get_trainable_vars();
+	const nn::TrainableVars trainable_vars = model_local.get_trainable_vars();
 	xt::xarray<xt::xarray<float>> vars_change;
 #if USE_MULTITHREADING_IN_Q
 	std::vector<std::thread> threads;
@@ -236,7 +236,7 @@ void dqn::Q::QPrivate::train_model()
 void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, std::size_t trace_index, float importance_weight)
 {
 	const Transition& transition = trace[trace_index];
-	std::unordered_map<const nn::Layer*, xt::xarray<float>> tape;
+	nn::Tape tape;
 	const auto l_value = model_local.call(transition.state, transition.action, &tape);
 	const auto grads = model_local.get_gradient(tape, l_value);
 	const float target = transition.done ? transition.reward :
@@ -295,8 +295,8 @@ void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate,
 
 void dqn::Q::QPrivate::global_update()
 {
-	const auto local_trainable_vars = model_local.get_trainable_vars();
-	const auto target_trainable_vars = model_target.get_trainable_vars();
+	const nn::TrainableVars local_trainable_vars = model_local.get_trainable_vars_ordered();
+	const nn::TrainableVars target_trainable_vars = model_target.get_trainable_vars_ordered();
 	for (std::size_t i = 0; i < target_trainable_vars.size(); i++)
 		*target_trainable_vars[i] = *local_trainable_vars[i];
 	update_count = 0;

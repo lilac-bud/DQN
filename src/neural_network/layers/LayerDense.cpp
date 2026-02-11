@@ -20,23 +20,28 @@ void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 	inputs = sigmoid(linear_res);
 }
 
-void nn::LayerDense::backward(std::unordered_map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
-	xt::xarray<float>& deltas) const
+void nn::LayerDense::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
 {
 	const auto& inputs = tape[this];
 	auto weight_derivative = xt::sum(xt::view(xt::transpose(deltas), xt::all(), xt::newaxis(), xt::all()) * 
 		xt::transpose(inputs), { 2 });
 	auto biases_derivative = xt::sum(deltas, { 0 });
-	gradient.push_back(weight_derivative);
-	gradient.push_back(biases_derivative);
+	gradient_map.insert({ {this, TrainableVarsType::Weights}, weight_derivative });
+	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
 	auto res = xt::sum(xt::transpose(weights) * xt::view(deltas, xt::all(), xt::newaxis(), xt::all()), { 2 });
 	deltas = res * sigmoid_derivative(inputs);
 }
 
-void nn::LayerDense::get_trainable_vars(std::vector<xt::xarray<float>*>& trainable_vars)
+void nn::LayerDense::get_trainable_vars(TrainableVars& trainable_vars)
 {
 	trainable_vars.push_back(&weights);
 	trainable_vars.push_back(&biases);
+}
+
+void nn::LayerDense::get_trainable_vars(TrainableVarsMap& trainable_vars_map)
+{
+	trainable_vars_map.insert({ {this, TrainableVarsType::Weights}, &weights });
+	trainable_vars_map.insert({ {this, TrainableVarsType::Biases}, &biases });
 }
 
 void nn::LayerDense::print_trainable_vars() const

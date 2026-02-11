@@ -12,6 +12,10 @@ target_sources(neural_network
 	PUBLIC
 		FILE_SET HEADERS
 		FILES
+			neural_network/utils/TapeFwd.h
+			neural_network/utils/GradientMapFwd.h
+			neural_network/utils/TrainableVarsMapFwd.h
+			
 			neural_network/layers/Layer.h
 			neural_network/layers/LayerConv2D.h
 			neural_network/layers/LayerDense.h

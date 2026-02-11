@@ -47,24 +47,29 @@ void nn::LayerConv2D::forward(xt::xarray<float>& inputs) const
 	inputs = sigmoid(linear_res);
 }
 
-void nn::LayerConv2D::backward(std::unordered_map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
-	xt::xarray<float>& deltas) const
+void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
 {
 	const auto& inputs = tape[this];
 	auto weight_derivative = xt::swapaxes(convolute(xt::swapaxes(inputs, 0, 3), xt::swapaxes(deltas, 0, 3),
 		xt::xarray<float>::from_shape(xt::swapaxes(filters, 0, 3).shape())), 0, 3);
 	auto biases_derivative = xt::sum(deltas, { 0,1,2 });
-	gradient.push_back(weight_derivative);
-	gradient.push_back(biases_derivative);
+	gradient_map.insert({ {this, TrainableVarsType::Weights}, weight_derivative });
+	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
 	auto res = convolute(pad(deltas), xt::swapaxes(filters, 0, 3),
 		xt::xarray<float>::from_shape(inputs.shape()));
 	deltas = res * sigmoid_derivative(inputs);
 }
 
-void nn::LayerConv2D::get_trainable_vars(std::vector<xt::xarray<float>*>& trainable_vars)
+void nn::LayerConv2D::get_trainable_vars(TrainableVars& trainable_vars)
 {
 	trainable_vars.push_back(&filters);
 	trainable_vars.push_back(&biases);
+}
+
+void nn::LayerConv2D::get_trainable_vars(TrainableVarsMap& trainable_vars_map)
+{
+	trainable_vars_map.insert({ {this, TrainableVarsType::Weights}, &filters });
+	trainable_vars_map.insert({ {this, TrainableVarsType::Biases}, &biases });
 }
 
 void nn::LayerConv2D::print_trainable_vars() const
