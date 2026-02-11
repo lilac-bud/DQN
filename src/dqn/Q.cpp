@@ -236,7 +236,7 @@ void dqn::Q::QPrivate::train_model()
 void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, std::size_t trace_index, float importance_weight)
 {
 	const Transition& transition = trace[trace_index];
-	std::map<const nn::Layer*, xt::xarray<float>> tape;
+	std::unordered_map<const nn::Layer*, xt::xarray<float>> tape;
 	const auto l_value = model_local.call(transition.state, transition.action, &tape);
 	const auto grads = model_local.get_gradient(tape, l_value);
 	const float target = transition.done ? transition.reward :

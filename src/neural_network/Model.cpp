@@ -15,7 +15,7 @@ xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> act
 }
 
 xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions,
-	std::map<const Layer*, xt::xarray<float>>* tape) const
+	std::unordered_map<const Layer*, xt::xarray<float>>* tape) const
 {
 	return call_with_tape(state, actions, tape);
 }

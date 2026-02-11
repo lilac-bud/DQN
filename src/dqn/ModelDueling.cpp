@@ -46,21 +46,21 @@ void dqn::ModelDueling::build(std::vector<size_t> input_shape) const
 }
 
 void dqn::ModelDueling::call_branch(const std::vector<nn::Layer*>& branch, xt::xarray<float>& inputs,
-	std::map<const nn::Layer*, xt::xarray<float>>* tape) const
+	std::unordered_map<const nn::Layer*, xt::xarray<float>>* tape) const
 {
 	for (const nn::Layer* layer : branch)
 		layer->forward(inputs, tape);
 }
 
 void dqn::ModelDueling::get_gradient_from_branch(const std::vector<nn::Layer*>& branch, 
-	std::map<const nn::Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient, xt::xarray<float>& deltas) const
+	std::unordered_map<const nn::Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient, xt::xarray<float>& deltas) const
 {
 	for (auto layer = branch.rbegin(); layer != branch.rend(); layer++)
 		(*layer)->backward(tape, gradient, deltas);
 }
 
 xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions,
-	std::map<const nn::Layer*, xt::xarray<float>>* tape) const
+	std::unordered_map<const nn::Layer*, xt::xarray<float>>* tape) const
 {
 	call_branch(conv_state_branch, state, tape);
 	call_branch(conv_actions_branch, actions, tape);
@@ -71,7 +71,7 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt
 	return value + advantage;
 }
 
-xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(std::map<const nn::Layer*, xt::xarray<float>>& tape,
+xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(std::unordered_map<const nn::Layer*, xt::xarray<float>>& tape,
 	xt::xarray<float> deltas) const
 {
 	std::vector<xt::xarray<float>> gradient;

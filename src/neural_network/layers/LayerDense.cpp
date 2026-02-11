@@ -20,7 +20,7 @@ void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 	inputs = sigmoid(linear_res);
 }
 
-void nn::LayerDense::backward(std::map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
+void nn::LayerDense::backward(std::unordered_map<const Layer*, xt::xarray<float>>& tape, std::vector<xt::xarray<float>>& gradient,
 	xt::xarray<float>& deltas) const
 {
 	const auto& inputs = tape[this];
