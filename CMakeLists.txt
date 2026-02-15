@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.23)
 
-project (dqn)
+project(dqn)
 
 add_subdirectory(external)
 add_subdirectory(src)
@@ -34,4 +34,13 @@ target_link_libraries(Q
 		json
 		xtensor
 		neural_network
+)
+
+include(GNUInstallDirs)
+
+install(
+	TARGETS Q
+	ARCHIVE
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}/${CMAKE_PROJECT_NAME}
+	FILE_SET publicHeaders
 )
