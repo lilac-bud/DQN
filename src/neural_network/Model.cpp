@@ -30,7 +30,7 @@ nn::TrainableVars nn::Model::get_trainable_vars() const
 	return trainable_vars;
 }
 
-nn::TrainableVars nn::Model::get_trainable_vars_ordered() const
+nn::TrainableVars nn::Model::get_trainable_vars_fixed() const
 {
 	TrainableVars trainable_vars;
 	for (auto& layer : layers)
@@ -40,7 +40,7 @@ nn::TrainableVars nn::Model::get_trainable_vars_ordered() const
 
 void nn::Model::save_weights(const std::string filename) const
 {
-	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_ordered();
+	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_fixed();
 	std::vector<xt::xarray<float>> weights;
 	for (auto& vars : trainable_vars)
 		weights.push_back(*vars);
@@ -56,7 +56,7 @@ void nn::Model::load_weights(const std::string filename) const
 	nlohmann::json json_weights;
 	in_file >> json_weights;
 	in_file.close();
-	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_ordered();
+	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_fixed();
 	std::size_t weights_index = 0;
 	for (auto& w : json_weights)
 	{

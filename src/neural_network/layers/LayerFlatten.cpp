@@ -6,12 +6,12 @@ void nn::LayerFlatten::build(std::vector<std::size_t>& input_shape)
 	outputs_number = 1;
 	for (std::size_t shape_elem : input_shape)
 		outputs_number *= shape_elem;
-	input_shape = { outputs_number };
+	input_shape = { input_shape[batch_size_axis], outputs_number };
 }
 
 void nn::LayerFlatten::forward(xt::xarray<float>& inputs) const
 {
-	inputs.reshape({ inputs.shape()[0], outputs_number });
+	inputs.reshape({ inputs.shape()[batch_size_axis], outputs_number });
 }
 
 void nn::LayerFlatten::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const

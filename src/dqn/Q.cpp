@@ -7,11 +7,16 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <ctime>
+#include <array>
 #define USE_MULTITHREADING_IN_Q 1
 #if USE_MULTITHREADING_IN_Q
 #include <mutex>
 #include <thread>
 #endif
+
+#define SCALAR at(0)
+
+using Axis = int;
 
 struct PreviousStateAction
 {
@@ -30,9 +35,24 @@ struct Transition
 	bool done;
 };
 
+struct Best
+{
+	std::size_t index;
+	float value;
+};
+
+struct Batch
+{
+	xt::xarray<std::size_t> index_batch;
+	xt::xarray<float> importance_weights;
+};
+
 class dqn::Q::QPrivate final
 {
 private:
+	static constexpr float max_priority = 1.0f;
+	static constexpr std::array shape_scalar{ 1 };
+
 	std::string model_local_filename;
 	std::string model_target_filename;
 	std::string parameters_filename;
@@ -46,33 +66,43 @@ private:
 	std::vector<Transition> trace;
 	std::vector<float> priorities;
 
-#if USE_MULTITHREADING_IN_Q
+#if USE_MULTITHREADING_IN_Q ON
 	std::mutex vars_change_mutex;
 #endif
 
 	void load();
 	void save() const;
-	std::tuple<std::size_t, float> find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions,
-		const ModelDueling& model) const;
-	void get_batch(xt::xarray<std::size_t>& index_batch, xt::xarray<float>& importance_weights) const;
+	Best find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions, const ModelDueling& model) const;
+	Batch get_batch() const;
 	void train_model();
 	void accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, std::size_t trace_index, float importance_weight);
 	void global_update();
 	void add_new_priority();
 
+	std::size_t inputs_number(const xt::xarray<float>& inputs) const
+	{
+		return inputs.shape()[Axis{ 0 }];
+	}
+	float random_float() const
+	{
+		return xt::random::rand<float>(shape_scalar).SCALAR;
+	}
+
 public:
 	~QPrivate();
 
-	std::size_t field_height = 0;
-	std::size_t field_width = 0;
-	std::size_t channels_number = 0;
-
+	std::array<std::size_t, 4> shape;
 	PreviousStateAction prev_record;
 
 	QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
 		const std::string player_id, const std::string filepath);
 	std::size_t get_act(float prev_reward, const xt::xarray<float>& state, const xt::xarray<float>& actions);
 	void update(float reward, const xt::xarray<float>& afterstate, const xt::xarray<float>& possible_actions, bool done);
+
+	std::size_t random_number(std::size_t lower, std::size_t upper) const
+	{
+		return xt::random::randint<std::size_t>(shape_scalar, lower, upper).SCALAR;
+	}
 };
 
 dqn::Q::Q(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
@@ -87,11 +117,10 @@ dqn::Q::~Q() = default;
 dqn::Q::QPrivate::QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
 	const std::string player_id, const std::string filepath)
 {
-	this->field_height = field_height;
-	this->field_width = field_width;
-	this->channels_number = channels_number;
-	model_local.build({ field_height, field_width, channels_number });
-	model_target.build({ field_height, field_width, channels_number });
+	shape = { 1, field_height, field_width, channels_number };
+	std::vector<std::size_t> shape_for_build{ shape.begin(), shape.end() };
+	model_local.build(shape_for_build);
+	model_target.build(shape_for_build);
 	const std::string common_part = filepath + std::string("qdb") + std::to_string(field_height) + std::string("x") +
 		std::to_string(field_width) + std::string("_") + player_id;
 	model_local_filename = common_part + "_local.json";
@@ -145,13 +174,13 @@ void dqn::Q::QPrivate::load()
 int dqn::Q::call_network(float prev_reward, const std::vector<float>& state, const std::vector<float>& actions, 
 	std::size_t actions_number)
 {
-	const xt::xarray<float> adapted_state = xt::adapt(state, 
-		std::vector<std::size_t>({ 1, QP->field_height, QP->field_width, QP->channels_number }));
+	std::array shape = QP->shape;
+	const xt::xarray<float> adapted_state = xt::adapt(state, shape);
 	xt::xarray<float> adapted_actions;
 	if (actions_number > 0)
 	{
-		adapted_actions = xt::adapt(actions, 
-			std::vector<std::size_t>({ actions_number, QP->field_height, QP->field_width, QP->channels_number }));
+		shape[Axis{ 0 }] = actions_number;
+		adapted_actions = xt::adapt(actions, shape);
 		return (int)QP->get_act(prev_reward, adapted_state, adapted_actions);
 	}
 	else
@@ -163,11 +192,13 @@ int dqn::Q::call_network(float prev_reward, const std::vector<float>& state, con
 
 int dqn::Q::call_network_debug(float prev_reward, std::size_t actions_number)
 {
-	const xt::xarray<float> state = xt::random::rand<float>({ (std::size_t)1, QP->field_height, QP->field_width, QP->channels_number });
+	std::array shape = QP->shape;
+	const xt::xarray<float> state = xt::random::rand<float>(shape);
 	xt::xarray<float> actions;
 	if (actions_number > 0)
 	{
-		actions = xt::random::rand<float>({ actions_number, QP->field_height, QP->field_width, QP->channels_number });
+		shape[Axis{ 0 }] = actions_number;
+		actions = xt::random::rand<float>(shape);
 		return (int)QP->get_act(prev_reward, state, actions);
 	}
 	else
@@ -179,42 +210,38 @@ int dqn::Q::call_network_debug(float prev_reward, std::size_t actions_number)
 
 int dqn::Q::call_network_debug(float prev_reward)
 {
-	return call_network_debug(prev_reward, 
-		xt::random::randint<std::size_t>({ 1 }, lower_actions_number_limit_debug, upper_actions_number_limit_debug)(0));
+	return call_network_debug(prev_reward, QP->random_number(lower_debug, upper_debug));
 }
 
-std::tuple<std::size_t, float> dqn::Q::QPrivate::find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions,
-	const ModelDueling& model) const
+Best dqn::Q::QPrivate::find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions, const ModelDueling& model) const
 {
 	const auto values = model.call(state, actions);
-	const std::size_t max_index = xt::unique(values).size() == 1 ?
-		xt::random::randint<std::size_t>({ 1 }, 0, actions.shape()[0])(0) : xt::argmax(values)(0);
-	return std::make_tuple(max_index, values(max_index));
+	const std::size_t max_index = xt::unique(values).size() == 1 ? random_number(0, inputs_number(actions)) : xt::argmax(values).SCALAR;
+	return { max_index, values(max_index) };
 }
 
 std::size_t dqn::Q::QPrivate::get_act(float prev_reward, const xt::xarray<float>& state, const xt::xarray<float>& actions)
 {
 	if (!prev_record.empty)
 		update(prev_reward, state, actions, false);
-	const std::size_t act_index = xt::random::rand<float>({ 1 })(1) < eps ?
-		xt::random::randint<std::size_t>({ 1 }, 0, actions.shape()[0])(0) : std::get<0>(find_best(state, actions, model_local));
+	const std::size_t act_index = random_float() < eps ?
+		random_number(0, inputs_number(actions)) : find_best(state, actions, model_local).index;
 	prev_record = { state, xt::view(actions, xt::range(act_index, act_index + 1), xt::all()), false };
 	return act_index;
 }
 
-void dqn::Q::QPrivate::get_batch(xt::xarray<std::size_t>& index_batch, xt::xarray<float>& importance_weights) const
+Batch dqn::Q::QPrivate::get_batch() const
 {
 	auto adapted_priorities = xt::adapt(priorities);
-	index_batch = xt::random::choice(xt::arange(trace.size()), Q::batch_size, adapted_priorities, false);
+	auto index_batch = xt::random::choice(xt::arange(trace.size()), Q::batch_size, adapted_priorities, false);
 	auto inter_res = xt::index_view(adapted_priorities, index_batch) / xt::sum(adapted_priorities) * trace.size();
-	importance_weights = xt::pow(inter_res, -beta) / xt::amax(inter_res);
+	auto importance_weights = xt::pow(inter_res, -beta) / xt::amax(inter_res);
+	return { index_batch, importance_weights };
 }
 
 void dqn::Q::QPrivate::train_model()
 {
-	xt::xarray<std::size_t> index_batch;
-	xt::xarray<float> importance_weights;
-	get_batch(index_batch, importance_weights);
+	auto [index_batch, importance_weights] = get_batch();
 	const nn::TrainableVars trainable_vars = model_local.get_trainable_vars();
 	xt::xarray<xt::xarray<float>> vars_change;
 #if USE_MULTITHREADING_IN_Q
@@ -233,15 +260,17 @@ void dqn::Q::QPrivate::train_model()
 		*trainable_vars[k] += vars_change(k);
 }
 
-void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, std::size_t trace_index, float importance_weight)
+void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& vars_change, 
+	std::size_t trace_index, float importance_weight)
 {
 	const Transition& transition = trace[trace_index];
 	nn::Tape tape;
 	const auto l_value = model_local.call(transition.state, transition.action, &tape);
 	const auto grads = model_local.get_gradient(tape, l_value);
-	const float target = transition.done ? transition.reward :
-		transition.reward + Q::gamma * std::get<1>(find_best(transition.afterstate, transition.possible_actions, model_target));
-	const float td_error = target - l_value(0);
+	float target = transition.reward;
+	if (transition.done)
+		target += Q::gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
+	const float td_error = target - l_value.SCALAR;
 	{
 #if USE_MULTITHREADING_IN_Q
 		std::lock_guard<std::mutex> lg(vars_change_mutex);
@@ -254,23 +283,18 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 
 void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate, const xt::xarray<float>& possible_actions, bool done)
 {
-	trace.push_back({ prev_record.state, prev_record.action, reward, afterstate, possible_actions, done });
+	trace.push_back({ 
+		prev_record.state, 
+		prev_record.action, 
+		reward, 
+		afterstate, 
+		possible_actions, 
+		done });
 	add_new_priority();
 	if (trace.size() < Q::min_trace)
 		return;
 	else if (trace.size() > Q::max_trace)
 	{
-		/*float max_p = 0.0f;
-		for (float p : priorities)
-			if (p > max_p) max_p = p;
-		for (auto i = priorities.begin(); i != priorities.end();)
-			if (*i < max_p)
-			{
-				trace.erase(trace.begin() + (i - priorities.begin()));
-				i = priorities.erase(i);
-			}
-			else
-				i++;*/
 		trace.erase(trace.begin());
 		priorities.erase(priorities.begin());
 	}
@@ -295,8 +319,8 @@ void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate,
 
 void dqn::Q::QPrivate::global_update()
 {
-	const nn::TrainableVars local_trainable_vars = model_local.get_trainable_vars_ordered();
-	const nn::TrainableVars target_trainable_vars = model_target.get_trainable_vars_ordered();
+	const nn::TrainableVars local_trainable_vars = model_local.get_trainable_vars_fixed();
+	const nn::TrainableVars target_trainable_vars = model_target.get_trainable_vars_fixed();
 	for (std::size_t i = 0; i < target_trainable_vars.size(); i++)
 		*target_trainable_vars[i] = *local_trainable_vars[i];
 	update_count = 0;
@@ -306,7 +330,7 @@ void dqn::Q::QPrivate::add_new_priority()
 {
 	if (priorities.empty())
 	{
-		priorities.push_back(1.0f); 
+		priorities.push_back(max_priority);
 		return;
 	}
 	float new_p = 0.0f;
@@ -316,4 +340,5 @@ void dqn::Q::QPrivate::add_new_priority()
 	priorities.push_back(new_p);
 }
 
+#undef SCALAR
 #undef USE_MULTITHREADING_IN_Q

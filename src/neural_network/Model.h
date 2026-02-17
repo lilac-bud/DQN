@@ -10,6 +10,8 @@ namespace nn
 {
 	using TrainableVars = std::vector<xt::xarray<float>*>;
 
+	class Layer;
+
 	class Model
 	{
 	protected:
@@ -26,7 +28,7 @@ namespace nn
 		xt::xarray<float> call(xt::xarray<float> state, xt::xarray<float> actions) const;
 		xt::xarray<float> call(xt::xarray<float> state, xt::xarray<float> actions, Tape* tape) const;
 		TrainableVars get_trainable_vars() const;
-		TrainableVars get_trainable_vars_ordered() const;
+		TrainableVars get_trainable_vars_fixed() const;
 		void save_weights(const std::string filename) const;
 		void load_weights(const std::string filename) const;
 		void print_trainable_vars() const;

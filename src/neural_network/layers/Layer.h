@@ -11,6 +11,7 @@
 namespace nn
 {
 	using TrainableVars = std::vector<xt::xarray<float>*>;
+	using Axis = int;
 
 	enum class TrainableVarsType
 	{
@@ -20,6 +21,12 @@ namespace nn
 
 	class Layer
 	{
+	protected:
+		static const Axis batch_size_axis = 0;
+
+		static constexpr float lower_rand_bound = 0.0f;
+		static constexpr float upper_rand_bound = 0.1f;
+
 	public:
 		static float sigmoid_scalar(const float input)
 		{
@@ -32,7 +39,7 @@ namespace nn
 		static inline auto sigmoid = xt::vectorize(sigmoid_scalar);
 		static inline auto sigmoid_derivative = xt::vectorize(sigmoid_derivative_scalar);
 
-		virtual void build(std::vector<std::size_t>& input_shape) = 0;
+		virtual void build(std::vector<std::size_t>& shape) = 0;
 		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const = 0;
 		virtual void get_trainable_vars(TrainableVars& trainable_vars) = 0;
 		virtual void get_trainable_vars(TrainableVarsMap& trainable_vars_map) = 0;

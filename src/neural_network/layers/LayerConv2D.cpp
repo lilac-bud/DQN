@@ -3,60 +3,82 @@
 #include <xtensor/generators/xrandom.hpp>
 #include <xtensor/io/xio.hpp>
 
-nn::LayerConv2D::LayerConv2D(std::size_t filters_number, std::vector<std::size_t> kernel_size, Padding padding)
+nn::LayerConv2D::LayerConv2D(std::size_t filters_number, std::array<std::size_t, 2> kernel_size, Padding padding)
 {
 	this->filters_number = filters_number;
-	this->kernel_size = kernel_size;
+	kernel_height = kernel_size[Axis{ 0 }];
+	kernel_width = kernel_size[Axis{ 1 }];
 	this->padding = padding;
-	biases = xt::random::rand<float>({ filters_number }, 0.0f, 0.1f);
+	biases = xt::random::rand<float>({ filters_number }, lower_rand_bound, upper_rand_bound);
 }
 
-void nn::LayerConv2D::build(std::vector<std::size_t>& input_shape)
+void nn::LayerConv2D::build(std::vector<std::size_t>& shape)
 {
-	filters = xt::random::rand<float>({ filters_number, kernel_size[0], kernel_size[1], input_shape[2] }, 0.0f, 0.1f);
+	const std::vector<std::size_t> filters_shape = { filters_number, kernel_height, kernel_width, shape[channels_axis] };
+	filters = xt::random::rand<float>(filters_shape, lower_rand_bound, upper_rand_bound);
+	pads.push_back({ 0,0 });
+	std::size_t pad_height_axis = 0;
+	std::size_t pad_width_axis = 0;
 	switch (padding)
 	{
 	case Padding::Valid:
-		pads.push_back(kernel_size[0] - 1);
-		pads.push_back(kernel_size[1] - 1);
-		input_shape[0] -= pads[0];
-		input_shape[1] -= pads[1];
+		pad_height_axis = kernel_height - 1;
+		pad_width_axis = kernel_width - 1;
+		shape[height_axis] -= pad_height_axis;
+		shape[width_axis] -= pad_width_axis;
 		break;
 	case Padding::Same:
-		pads.push_back((kernel_size[0] - 1) / 2);
-		pads.push_back((kernel_size[1] - 1) / 2);
+		pad_height_axis = (kernel_height - 1) / 2;
+		pad_width_axis = (kernel_width - 1) / 2;
 		break;
 	default:
 		break;
 	}
-	input_shape[2] = filters_number;
-	outputs_shape = input_shape;
-}
-
-auto nn::LayerConv2D::pad(xt::xarray<float>& array_to_pad) const
-{
-	return xt::pad(array_to_pad, { {0,0}, {pads[0],pads[0]}, {pads[1],pads[1]}, {0,0} });
+	pads.push_back({ pad_height_axis,pad_height_axis });
+	pads.push_back({ pad_width_axis,pad_width_axis });
+	pads.push_back({ 0,0 });
+	shape[channels_axis] = filters_number;
+	outputs_shape = shape;
 }
 
 void nn::LayerConv2D::forward(xt::xarray<float>& inputs) const
 {
 	std::vector<std::size_t> shape(outputs_shape);
-	shape.insert(shape.begin(), inputs.shape()[0]);
-	auto linear_res = convolute(padding == Padding::Same ? pad(inputs) : inputs,
-		filters, xt::xarray<float>::from_shape(shape)) + biases;
+	shape[batch_size_axis] = inputs.shape()[batch_size_axis];
+	auto linear_res = convolute(padding == Padding::Same ? xt::pad(inputs, pads) : inputs, filters, shape) + biases;
 	inputs = sigmoid(linear_res);
 }
 
 void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
 {
 	const auto& inputs = tape[this];
-	auto weight_derivative = xt::swapaxes(convolute(xt::swapaxes(inputs, 0, 3), xt::swapaxes(deltas, 0, 3),
-		xt::xarray<float>::from_shape(xt::swapaxes(filters, 0, 3).shape())), 0, 3);
-	auto biases_derivative = xt::sum(deltas, { 0,1,2 });
+
+	//to get weight derivative properly the following needs to be considered
+	//	1. deltas are used as filters in convolute operation
+	//	2. for convolute operation to work channels axes of inputs and deltas need to allign, that is be equal
+	//	3. deltas channel number is equal to filters number
+	//that's why batch_size_axis and channels_axis need to be swapped for both inputs and deltas
+	const auto transposed_inputs = xt::swapaxes(inputs, batch_size_axis, channels_axis);
+	const auto transposed_deltas = xt::swapaxes(deltas, batch_size_axis, channels_axis);
+
+	//in convolute operation the number of filters becomes the outputs channels number
+	//but we need the channels number of inputs (which is currently in batch_size_axis) to be preserved
+	//that's why the outputs shape has to get batch_size_axis and channels_axis swapped as well
+	const auto& transposed_outputs_shape = xt::swapaxes(filters, batch_size_axis, channels_axis).shape();
+	auto transposed_weight_derivative = convolute(transposed_inputs, transposed_deltas, transposed_outputs_shape);
+
+	//after transposing the result of convolution we get a proper weight derivative
+	auto weight_derivative = xt::swapaxes(transposed_weight_derivative, batch_size_axis, channels_axis);
+
+	//biases are applyed per filter, and since deltas channels number is equal to filters number,
+	//we only need to get rid of extra axes
+	auto biases_derivative = xt::sum(deltas, { batch_size_axis, height_axis, width_axis });
+
 	gradient_map.insert({ {this, TrainableVarsType::Weights}, weight_derivative });
 	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
-	auto res = convolute(pad(deltas), xt::swapaxes(filters, 0, 3),
-		xt::xarray<float>::from_shape(inputs.shape()));
+
+	//again, convolute operation requares channels axes to allign, so to get new deltas filters need to be transposed
+	auto res = convolute(xt::pad(deltas, pads), xt::swapaxes(filters, batch_size_axis, channels_axis), inputs.shape());
 	deltas = res * sigmoid_derivative(inputs);
 }
 

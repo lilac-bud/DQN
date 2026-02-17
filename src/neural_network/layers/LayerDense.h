@@ -8,6 +8,8 @@ namespace nn
     class LayerDense : public Layer
     {
     protected:
+        static const Axis input_axis = 1;
+
         xt::xarray<float> weights;
         xt::xarray<float> biases;
         std::size_t outputs_number = 0;

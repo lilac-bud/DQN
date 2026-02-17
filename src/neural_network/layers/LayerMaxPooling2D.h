@@ -2,17 +2,23 @@
 #define NEURALNETWORK_LAYERMAXPOOLING2D_H
 
 #include "neural_network/layers/Layer.h"
+#include <array>
 
 namespace nn
 {
 	class LayerMaxPooling2D : public Layer
 	{
 	protected:
+		static const Axis height_axis = 1;
+		static const Axis width_axis = 2;
+		static const Axis channels_axis = 3;
+
 		std::vector<std::size_t> outputs_shape;
-		std::vector<std::size_t> pool_size;
+		std::size_t pool_height;
+		std::size_t pool_width;
 
 	public:
-		LayerMaxPooling2D(std::vector<std::size_t> pool_size);
+		LayerMaxPooling2D(std::array<std::size_t, 2> pool_size);
 		virtual void build(std::vector<std::size_t>& input_shape) override;
 		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
 		virtual void get_trainable_vars(TrainableVars& trainable_vars) override {};

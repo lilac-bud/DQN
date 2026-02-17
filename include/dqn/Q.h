@@ -10,6 +10,7 @@ namespace dqn
 	class Q final
 	{
 	public:
+		//parameters to configure dqn
 		static constexpr float alpha = 0.00025f;
 		static constexpr float gamma = 0.95f;
 		static constexpr float min_eps = 0.1f;
@@ -23,14 +24,15 @@ namespace dqn
 		static const int train_local = 10;
 		static const std::size_t batch_size = 10;
 		static const std::size_t min_trace = 15;
-		static const std::size_t max_trace = 3000;
+		static const std::size_t max_trace = 500;
 
 	private:
 		class QPrivate;
 		std::unique_ptr<QPrivate> QP;
 
-		static const std::size_t lower_actions_number_limit_debug = 20;
-		static const std::size_t upper_actions_number_limit_debug = 45;
+		//limits for randomizing action number
+		static const std::size_t lower_debug = 20;
+		static const std::size_t upper_debug = 45;
 
 	public:
 		Q(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
@@ -39,6 +41,7 @@ namespace dqn
 		void soft_reset();
 		int call_network(float prev_reward, const std::vector<float>& state,
 			const std::vector<float>& actions, std::size_t actions_number);
+
 		int call_network_debug(float prev_reward, std::size_t actions_number);
 		int call_network_debug(float prev_reward);
 	};
