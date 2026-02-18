@@ -1,21 +1,11 @@
-#include "neural_network/Model.h"
+#include "neural_network/model/ModelBase.h"
 #include "neural_network/layers/Layer.h"
 #include <xtensor/io/xjson.hpp>
 #include <fstream>
 
-nn::Model::~Model() = default;
+nn::ModelBase::~ModelBase() = default;
 
-xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions) const
-{
-	return call_with_tape(state, actions, nullptr);
-}
-
-xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions, Tape* tape) const
-{
-	return call_with_tape(state, actions, tape);
-}
-
-nn::TrainableVars nn::Model::get_trainable_vars() const
+nn::TrainableVars nn::ModelBase::get_trainable_vars() const
 {
 	TrainableVarsMap trainable_vars_map;
 	for (auto& layer : layers)
@@ -26,7 +16,7 @@ nn::TrainableVars nn::Model::get_trainable_vars() const
 	return trainable_vars;
 }
 
-nn::TrainableVars nn::Model::get_trainable_vars_fixed() const
+nn::TrainableVars nn::ModelBase::get_trainable_vars_fixed() const
 {
 	TrainableVars trainable_vars;
 	for (auto& layer : layers)
@@ -34,7 +24,7 @@ nn::TrainableVars nn::Model::get_trainable_vars_fixed() const
 	return trainable_vars;
 }
 
-void nn::Model::save_weights(const std::string filename) const
+void nn::ModelBase::save_weights(const std::string filename) const
 {
 	const std::vector<xt::xarray<float>*> trainable_vars = get_trainable_vars_fixed();
 	std::vector<xt::xarray<float>> weights;
@@ -46,7 +36,7 @@ void nn::Model::save_weights(const std::string filename) const
 	out_file.close();
 }
 
-void nn::Model::load_weights(const std::string filename) const
+void nn::ModelBase::load_weights(const std::string filename) const
 {
 	std::ifstream in_file(filename);
 	nlohmann::json json_weights;
@@ -61,7 +51,7 @@ void nn::Model::load_weights(const std::string filename) const
 	}
 }
 
-void nn::Model::print_trainable_vars() const
+void nn::ModelBase::print_trainable_vars() const
 {
 	for (const auto& layer : layers)
 		layer->print_trainable_vars();

@@ -7,7 +7,7 @@ target_sources(neural_network
 		neural_network/layers/LayerDense.cpp
 		neural_network/layers/LayerFlatten.cpp
 		neural_network/layers/LayerMaxPooling2D.cpp
-		neural_network/Model.cpp
+		neural_network/model/ModelBase.cpp
 
 	PUBLIC
 		FILE_SET HEADERS
@@ -21,7 +21,8 @@ target_sources(neural_network
 			neural_network/layers/LayerDense.h
 			neural_network/layers/LayerFlatten.h
 			neural_network/layers/LayerMaxPooling2D.h
-			neural_network/Model.h
+			neural_network/model/ModelBase.h
+			neural_network/model/ModelCall.h
 )
 
 target_link_libraries(neural_network xtensor)

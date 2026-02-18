@@ -81,9 +81,8 @@ void dqn::ModelDueling::get_gradient_from_layers_part(LayersPartName layers_part
 		(*layer_it)->backward(tape, gradient_map, deltas);
 }
 
-xt::xarray<float> dqn::ModelDueling::call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions, nn::Tape* tape) const
+xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const
 {
-	std::array inputs{ state, actions };
 	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; great_part++)
 	{
 		if (great_part != ConvGreatPart)

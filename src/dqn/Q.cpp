@@ -216,7 +216,7 @@ int dqn::Q::call_network_debug(float prev_reward)
 
 Best dqn::Q::QPrivate::find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions, const ModelDueling& model) const
 {
-	const auto values = model.call(state, actions);
+	const auto values = model.call({ state, actions });
 	const std::size_t max_index = xt::unique(values).size() == 1 ? 
 		random_number(0, inputs_number(actions)) : xt::argmax(values).TO_SCALAR;
 	return { max_index, values(max_index) };
@@ -267,7 +267,7 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 {
 	const Transition& transition = trace[trace_index];
 	nn::Tape tape;
-	const auto l_value = model_local.call(transition.state, transition.action, &tape);
+	const auto l_value = model_local.call({ transition.state, transition.action }, &tape);
 	const auto grads = model_local.get_gradient(tape, l_value);
 	float target = transition.reward;
 	if (transition.done)

@@ -1,13 +1,14 @@
 #ifndef DQN_MODELDUELING_H
 #define DQN_MODELDUELING_H
 
-#include "neural_network/Model.h"
+#include "neural_network/model/ModelBase.h"
+#include "neural_network/model/ModelCall.h"
 #include "neural_network/utils/GradientMapFwd.h"
 #include <array>
 
 namespace dqn
 {
-	class ModelDueling : public nn::Model
+	class ModelDueling : public nn::ModelBase, public nn::ModelCall<2>
 	{
 	private:
 		struct layers_part
@@ -54,12 +55,12 @@ namespace dqn
 		void get_gradient_from_layers_part(LayersPartName layers_part_name, nn::Tape& tape, nn::GradientMap& gradient_map,
 			xt::xarray<float>& deltas) const;
 
-		xt::xarray<float> call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions, nn::Tape* tape) const override;
+		virtual xt::xarray<float> call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const override;
 
 	public:
 		ModelDueling();
-		void build(std::vector<std::size_t> input_shape) const override;
-		xt::xarray<xt::xarray<float>> get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const override;
+		virtual void build(std::vector<std::size_t> input_shape) const override;
+		virtual xt::xarray<xt::xarray<float>> get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const override;
 	};
 }
 
