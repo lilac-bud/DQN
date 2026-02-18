@@ -3,11 +3,7 @@
 #include <xtensor/io/xjson.hpp>
 #include <fstream>
 
-nn::Model::~Model()
-{
-	for (auto& layer : layers)
-		delete layer;
-}
+nn::Model::~Model() = default;
 
 xt::xarray<float> nn::Model::call(xt::xarray<float> state, xt::xarray<float> actions) const
 {

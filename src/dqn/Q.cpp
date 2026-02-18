@@ -8,13 +8,14 @@
 #include <fstream>
 #include <ctime>
 #include <array>
+#include <algorithm>
 #define USE_MULTITHREADING_IN_Q 1
 #if USE_MULTITHREADING_IN_Q
 #include <mutex>
 #include <thread>
 #endif
 
-#define SCALAR at(0)
+#define TO_SCALAR at(0)
 
 using Axis = int;
 
@@ -66,7 +67,7 @@ private:
 	std::vector<Transition> trace;
 	std::vector<float> priorities;
 
-#if USE_MULTITHREADING_IN_Q ON
+#if USE_MULTITHREADING_IN_Q
 	std::mutex vars_change_mutex;
 #endif
 
@@ -85,7 +86,7 @@ private:
 	}
 	float random_float() const
 	{
-		return xt::random::rand<float>(shape_scalar).SCALAR;
+		return xt::random::rand<float>(shape_scalar).TO_SCALAR;
 	}
 
 public:
@@ -101,7 +102,7 @@ public:
 
 	std::size_t random_number(std::size_t lower, std::size_t upper) const
 	{
-		return xt::random::randint<std::size_t>(shape_scalar, lower, upper).SCALAR;
+		return xt::random::randint<std::size_t>(shape_scalar, lower, upper).TO_SCALAR;
 	}
 };
 
@@ -216,7 +217,8 @@ int dqn::Q::call_network_debug(float prev_reward)
 Best dqn::Q::QPrivate::find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions, const ModelDueling& model) const
 {
 	const auto values = model.call(state, actions);
-	const std::size_t max_index = xt::unique(values).size() == 1 ? random_number(0, inputs_number(actions)) : xt::argmax(values).SCALAR;
+	const std::size_t max_index = xt::unique(values).size() == 1 ? 
+		random_number(0, inputs_number(actions)) : xt::argmax(values).TO_SCALAR;
 	return { max_index, values(max_index) };
 }
 
@@ -241,7 +243,7 @@ Batch dqn::Q::QPrivate::get_batch() const
 
 void dqn::Q::QPrivate::train_model()
 {
-	auto [index_batch, importance_weights] = get_batch();
+	const auto [index_batch, importance_weights] = get_batch();
 	const nn::TrainableVars trainable_vars = model_local.get_trainable_vars();
 	xt::xarray<xt::xarray<float>> vars_change;
 #if USE_MULTITHREADING_IN_Q
@@ -270,7 +272,7 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 	float target = transition.reward;
 	if (transition.done)
 		target += Q::gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
-	const float td_error = target - l_value.SCALAR;
+	const float td_error = target - l_value.TO_SCALAR;
 	{
 #if USE_MULTITHREADING_IN_Q
 		std::lock_guard<std::mutex> lg(vars_change_mutex);
@@ -283,13 +285,13 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 
 void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate, const xt::xarray<float>& possible_actions, bool done)
 {
-	trace.push_back({ 
+	trace.emplace_back( 
 		prev_record.state, 
 		prev_record.action, 
 		reward, 
 		afterstate, 
 		possible_actions, 
-		done });
+		done );
 	add_new_priority();
 	if (trace.size() < Q::min_trace)
 		return;
@@ -329,16 +331,10 @@ void dqn::Q::QPrivate::global_update()
 void dqn::Q::QPrivate::add_new_priority()
 {
 	if (priorities.empty())
-	{
 		priorities.push_back(max_priority);
-		return;
-	}
-	float new_p = 0.0f;
-	for (float p : priorities)
-		if (p > new_p)
-			new_p = p;
-	priorities.push_back(new_p);
+	else
+		priorities.push_back(*std::max_element(priorities.begin(), priorities.end()));
 }
 
-#undef SCALAR
+#undef TO_SCALAR
 #undef USE_MULTITHREADING_IN_Q

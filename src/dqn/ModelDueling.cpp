@@ -11,36 +11,36 @@ dqn::ModelDueling::ModelDueling()
 {
 	layers_parts[ConvStatePart] = {
 		.all_layers = &layers,
-		.part_begin = layers.insert(layers.end(),{
-			new nn::LayerConv2D(10, { 3,3 }, nn::Padding::Valid),
-			new nn::LayerMaxPooling2D({ 2,2 }),
-			new nn::LayerConv2D(20, { 3,3 }, nn::Padding::Valid),
-			new nn::LayerMaxPooling2D({ 2,2 }),
-			new nn::LayerFlatten }) - layers.begin(),
+		.part_begin = insert_into_layers(
+			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
+			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
+			std::make_unique<nn::LayerFlatten>() ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size(),
 	};
 	layers_parts[ConvActionsPart] = {
 		.all_layers = &layers,
-		.part_begin = layers.insert(layers.end(),{
-			new nn::LayerConv2D(10, { 3,3 }, nn::Padding::Valid),
-			new nn::LayerMaxPooling2D({ 2,2 }),
-			new nn::LayerConv2D(20, { 3,3 }, nn::Padding::Valid),
-			new nn::LayerMaxPooling2D({ 2,2 }),
-			new nn::LayerFlatten }) - layers.begin(),
+		.part_begin = insert_into_layers(
+			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
+			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
+			std::make_unique<nn::LayerFlatten>() ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
 	};
 	layers_parts[ValuePart] = {
 		.all_layers = &layers,
-		.part_begin = layers.insert(layers.end(),{
-			new nn::LayerDense(10), 
-			new nn::LayerDense(1) }) - layers.begin(),
+		.part_begin = insert_into_layers(
+			std::make_unique<nn::LayerDense>(10), 
+			std::make_unique<nn::LayerDense>(1) ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
 	};
 	layers_parts[AdvantagePart] = {
 		.all_layers = &layers,
-		.part_begin = layers.insert(layers.end(),{
-			new nn::LayerDense(20),
-			new nn::LayerDense(1) }) - layers.begin(),
+		.part_begin = insert_into_layers(
+			std::make_unique<nn::LayerDense>(20),
+			std::make_unique<nn::LayerDense>(1) ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
 	};
 	for (auto& part : layers_parts)
@@ -62,14 +62,14 @@ void dqn::ModelDueling::build(std::vector<std::size_t> input_shape) const
 			shapes[ActionsBranch][Axis{ 1 }] += shapes[StateBranch][Axis{ 1 }];
 		auto& great_part_names = parts_names[great_part];
 		for (int branch = StateBranch; branch != BranchesTotal; branch++)
-			for (nn::Layer* layer : layers_parts[great_part_names[branch]])
+			for (auto& layer : layers_parts[great_part_names[branch]])
 				layer->build(shapes[branch]);
 	}
 }
 
 void dqn::ModelDueling::call_layers_part(LayersPartName layers_part_name, xt::xarray<float>& inputs, nn::Tape* tape) const
 {
-	for (const nn::Layer* layer : layers_parts[layers_part_name])
+	for (const auto& layer : layers_parts[layers_part_name])
 		layer->forward(inputs, tape);
 }
 
@@ -128,6 +128,7 @@ xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(nn::Tape& tape, xt
 			get_gradient_from_layers_part(great_part_names[branch], tape, gradient_map, branch_deltas[branch]);
 	}
 	std::vector<xt::xarray<float>> gradient;
+	gradient.reserve(gradient_map.size());
 	for (auto i = gradient_map.begin(); i != gradient_map.end(); i++)
 		gradient.push_back(i->second);
 	return xt::adapt(gradient);

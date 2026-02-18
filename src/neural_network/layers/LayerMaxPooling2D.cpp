@@ -2,10 +2,9 @@
 #include <xtensor/views/xview.hpp>
 #include <xtensor/views/xindex_view.hpp>
 
-nn::LayerMaxPooling2D::LayerMaxPooling2D(std::array<std::size_t, 2> pool_size)
+nn::LayerMaxPooling2D::LayerMaxPooling2D(PoolSize pool_size)
 {
-	pool_height = pool_size[Axis{ 0 }];
-	pool_width = pool_size[Axis{ 1 }];
+	std::tie(pool_height, pool_width) = pool_size;
 }
 
 void nn::LayerMaxPooling2D::build(std::vector<std::size_t>& input_shape)

@@ -2,10 +2,11 @@
 #define NEURALNETWORK_LAYERMAXPOOLING2D_H
 
 #include "neural_network/layers/Layer.h"
-#include <array>
 
 namespace nn
 {
+	using PoolSize = std::pair<std::size_t, std::size_t>;
+
 	class LayerMaxPooling2D : public Layer
 	{
 	protected:
@@ -18,7 +19,7 @@ namespace nn
 		std::size_t pool_width;
 
 	public:
-		LayerMaxPooling2D(std::array<std::size_t, 2> pool_size);
+		LayerMaxPooling2D(PoolSize pool_size);
 		virtual void build(std::vector<std::size_t>& input_shape) override;
 		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
 		virtual void get_trainable_vars(TrainableVars& trainable_vars) override {};

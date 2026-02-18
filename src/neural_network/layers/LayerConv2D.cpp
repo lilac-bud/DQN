@@ -3,11 +3,10 @@
 #include <xtensor/generators/xrandom.hpp>
 #include <xtensor/io/xio.hpp>
 
-nn::LayerConv2D::LayerConv2D(std::size_t filters_number, std::array<std::size_t, 2> kernel_size, Padding padding)
+nn::LayerConv2D::LayerConv2D(std::size_t filters_number, KernelSize kernel_size, Padding padding)
 {
 	this->filters_number = filters_number;
-	kernel_height = kernel_size[Axis{ 0 }];
-	kernel_width = kernel_size[Axis{ 1 }];
+	std::tie(kernel_height, kernel_width) = kernel_size;
 	this->padding = padding;
 	biases = xt::random::rand<float>({ filters_number }, lower_rand_bound, upper_rand_bound);
 }
@@ -96,6 +95,5 @@ void nn::LayerConv2D::get_trainable_vars(TrainableVarsMap& trainable_vars_map)
 
 void nn::LayerConv2D::print_trainable_vars() const
 {
-	std::cout << filters << std::endl;
-	std::cout << biases << std::endl;
+	std::cout << filters << std::endl << biases << std::endl;
 }

@@ -2,7 +2,6 @@
 #define DQN_MODELDUELING_H
 
 #include "neural_network/Model.h"
-#include "neural_network/utils/TapeFwd.h"
 #include "neural_network/utils/GradientMapFwd.h"
 #include <array>
 
@@ -13,7 +12,8 @@ namespace dqn
 	private:
 		struct layers_part
 		{
-			std::vector<nn::Layer*>* all_layers;
+			std::vector<std::unique_ptr<nn::Layer>>* all_layers;
+
 			std::ptrdiff_t part_begin;
 			std::ptrdiff_t part_end;
 			std::ptrdiff_t part_rbegin;
@@ -27,28 +27,24 @@ namespace dqn
 
 		enum LayersPartName
 		{
-			ConvStatePart,
-			ConvActionsPart,
-			ValuePart,
-			AdvantagePart,
+			ConvStatePart, ConvActionsPart, ValuePart, AdvantagePart, 
 			PartsTotal,
 		};
 
 		enum BranchName
 		{
-			StateBranch,
-			ActionsBranch,
+			StateBranch, ActionsBranch, 
 			BranchesTotal
 		};
 
 		enum GreatPartName
 		{
-			ConvGreatPart,
-			FlatGreatPart,
+			ConvGreatPart, FlatGreatPart, 
 			GreatPartsTotal
 		};
 
 		std::array<layers_part, PartsTotal> layers_parts;
+
 		std::array<std::array<LayersPartName, BranchesTotal>, GreatPartsTotal> parts_names = {
 			std::array{ConvStatePart, ConvActionsPart},
 			std::array{ValuePart, AdvantagePart}

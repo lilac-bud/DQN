@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <memory>
 #include <xtensor/containers/xarray.hpp>
 #include "neural_network/utils/TapeFwd.h"
 
@@ -15,9 +16,18 @@ namespace nn
 	class Model
 	{
 	protected:
-		std::vector<Layer*> layers;
+		std::vector<std::unique_ptr<Layer>> layers;
 
 		virtual xt::xarray<float> call_with_tape(xt::xarray<float>& state, xt::xarray<float>& actions, Tape* tape) const = 0;
+
+		template <typename... Args>
+		auto insert_into_layers(Args&&... args)
+		{
+			std::size_t prev_size = layers.size();
+			layers.reserve(prev_size + sizeof...(Args));
+			(layers.emplace_back(std::forward<Args>(args)), ...);
+			return layers.begin() + prev_size;
+		}
 
 	public:
 		~Model();

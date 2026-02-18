@@ -4,10 +4,11 @@
 #include "neural_network/layers/Layer.h"
 #include <xtensor/views/xview.hpp>
 #include <xtensor/io/xio.hpp>
-#include <array>
 
 namespace nn
 {
+    using KernelSize = std::pair<std::size_t, std::size_t>;
+
     enum class Padding
     {
         Valid,
@@ -52,7 +53,7 @@ namespace nn
         }
 
     public:
-        LayerConv2D(std::size_t filters_number, std::array<std::size_t, 2> kernel_size, Padding padding);
+        LayerConv2D(std::size_t filters_number, KernelSize kernel_size, Padding padding);
         virtual void build(std::vector<std::size_t>& shape) override;
         virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
         virtual void get_trainable_vars(TrainableVars& trainable_vars) override;

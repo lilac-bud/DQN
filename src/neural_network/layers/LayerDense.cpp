@@ -46,6 +46,5 @@ void nn::LayerDense::get_trainable_vars(TrainableVarsMap& trainable_vars_map)
 
 void nn::LayerDense::print_trainable_vars() const
 {
-	std::cout << weights << std::endl;
-	std::cout << biases << std::endl;
+	std::cout << weights << std::endl << biases << std::endl;
 }
