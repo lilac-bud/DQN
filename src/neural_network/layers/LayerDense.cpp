@@ -1,10 +1,13 @@
 #include "neural_network/layers/LayerDense.h"
+#include "neural_network/utils/ActivationFunctions.h"
+
 #include <xtensor/generators/xrandom.hpp>
 #include <xtensor/io/xio.hpp>
 
-nn::LayerDense::LayerDense(std::size_t outputs_number)
+nn::LayerDense::LayerDense(std::size_t outputs_number, Activation activation)
 {
 	this->outputs_number = outputs_number;
+	this->activation = activation;
 	biases = xt::random::rand<float>({ outputs_number }, lower_rand_bound, upper_rand_bound);
 }
 
@@ -17,7 +20,7 @@ void nn::LayerDense::build(std::vector<std::size_t>& input_shape)
 void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 {
 	auto linear_res = xt::sum(weights * xt::view(inputs, xt::all(), xt::newaxis(), xt::all()), { input_axis + 1 }) + biases;
-	inputs = sigmoid(linear_res);
+	inputs = activate(linear_res, activation);
 }
 
 void nn::LayerDense::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
@@ -29,7 +32,7 @@ void nn::LayerDense::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<
 	gradient_map.insert({ {this, TrainableVarsType::Weights}, weight_derivative });
 	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
 	auto res = xt::sum(xt::transpose(weights) * xt::view(deltas, xt::all(), xt::newaxis(), xt::all()), { input_axis + 1 });
-	deltas = res * sigmoid_derivative(inputs);
+	deltas = res * get_derivative(inputs, activation);
 }
 
 void nn::LayerDense::get_trainable_vars(TrainableVars& trainable_vars)

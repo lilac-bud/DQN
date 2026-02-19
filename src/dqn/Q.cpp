@@ -1,5 +1,6 @@
 #include "dqn/Q.h"
 #include "dqn/ModelDueling.h"
+
 #include <xtensor/views/xindex_view.hpp>
 #include <xtensor/misc/xsort.hpp>
 #include <xtensor/generators/xrandom.hpp>

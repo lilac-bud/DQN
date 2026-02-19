@@ -4,6 +4,7 @@
 #include "neural_network/model/ModelBase.h"
 #include "neural_network/model/ModelCall.h"
 #include "neural_network/utils/GradientMapFwd.h"
+
 #include <array>
 
 namespace dqn

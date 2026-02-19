@@ -3,7 +3,10 @@
 #include "neural_network/layers/LayerMaxPooling2D.h"
 #include "neural_network/layers/LayerFlatten.h"
 #include "neural_network/layers/LayerDense.h"
+#include "neural_network/utils/ActivationFunctions.h"
+
 #include <xtensor/containers/xadapt.hpp>
+#include <xtensor/views/xview.hpp>
 
 using Axis = int;
 
@@ -12,9 +15,9 @@ dqn::ModelDueling::ModelDueling()
 	layers_parts[ConvStatePart] = {
 		.all_layers = &layers,
 		.part_begin = insert_into_layers(
-			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid, nn::Activation::Sigmoid),
 			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
-			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid, nn::Activation::Sigmoid),
 			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
 			std::make_unique<nn::LayerFlatten>() ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size(),
@@ -22,9 +25,9 @@ dqn::ModelDueling::ModelDueling()
 	layers_parts[ConvActionsPart] = {
 		.all_layers = &layers,
 		.part_begin = insert_into_layers(
-			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerConv2D>(10, nn::KernelSize{ 3,3 }, nn::Padding::Valid, nn::Activation::Sigmoid),
 			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
-			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid),
+			std::make_unique<nn::LayerConv2D>(20, nn::KernelSize{ 3,3 }, nn::Padding::Valid, nn::Activation::Sigmoid),
 			std::make_unique<nn::LayerMaxPooling2D>(nn::PoolSize{ 2,2 }),
 			std::make_unique<nn::LayerFlatten>() ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
@@ -32,15 +35,15 @@ dqn::ModelDueling::ModelDueling()
 	layers_parts[ValuePart] = {
 		.all_layers = &layers,
 		.part_begin = insert_into_layers(
-			std::make_unique<nn::LayerDense>(10), 
-			std::make_unique<nn::LayerDense>(1) ) - layers.begin(),
+			std::make_unique<nn::LayerDense>(10, nn::Activation::Sigmoid),
+			std::make_unique<nn::LayerDense>(1, nn::Activation::Sigmoid) ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
 	};
 	layers_parts[AdvantagePart] = {
 		.all_layers = &layers,
 		.part_begin = insert_into_layers(
-			std::make_unique<nn::LayerDense>(20),
-			std::make_unique<nn::LayerDense>(1) ) - layers.begin(),
+			std::make_unique<nn::LayerDense>(20, nn::Activation::Sigmoid),
+			std::make_unique<nn::LayerDense>(1, nn::Activation::Sigmoid) ) - layers.begin(),
 		.part_end = (std::ptrdiff_t)layers.size()
 	};
 	for (auto& part : layers_parts)
@@ -102,7 +105,7 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>
 xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const
 {
 	nn::GradientMap gradient_map;
-	deltas = nn::Layer::sigmoid_derivative(deltas);
+	deltas = nn::sigmoid_derivative(deltas);
 	std::array<xt::xarray<float>, BranchesTotal> branch_deltas;
 	branch_deltas.fill(deltas);
 	//we need to go backwards to get the gradient

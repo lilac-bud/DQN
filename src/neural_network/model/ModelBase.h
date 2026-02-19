@@ -1,11 +1,12 @@
 #ifndef NEURALNETWORK_MODELBASE_H
 #define NEURALNETWORK_MODELBASE_H
 
+#include "neural_network/utils/TapeFwd.h"
+
 #include <vector>
 #include <string>
 #include <memory>
 #include <xtensor/containers/xarray.hpp>
-#include "neural_network/utils/TapeFwd.h"
 
 namespace nn
 {
@@ -18,7 +19,7 @@ namespace nn
 	protected:
 		std::vector<std::unique_ptr<Layer>> layers;
 
-		template <typename... Args>
+		template<typename... Args>
 		auto insert_into_layers(Args&&... args)
 		{
 			std::size_t prev_size = layers.size();

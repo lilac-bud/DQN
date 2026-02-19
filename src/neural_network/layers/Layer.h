@@ -1,12 +1,12 @@
 #ifndef NEURALNETWORK_LAYER_H
 #define NEURALNETWORK_LAYER_H
 
-#include <vector>
-#include <xtensor/containers/xarray.hpp>
-#include <xtensor/core/xvectorize.hpp>
 #include "neural_network/utils/TapeFwd.h"
 #include "neural_network/utils/GradientMapFwd.h"
 #include "neural_network/utils/TrainableVarsMapFwd.h"
+
+#include <vector>
+#include <xtensor/containers/xarray.hpp>
 
 namespace nn
 {
@@ -24,21 +24,11 @@ namespace nn
 	protected:
 		static const Axis batch_size_axis = 0;
 
+		//for randomizing weights and biases
 		static constexpr float lower_rand_bound = 0.0f;
 		static constexpr float upper_rand_bound = 0.1f;
 
 	public:
-		static float sigmoid_scalar(const float input)
-		{
-			return 1 / (1 + input);
-		}
-		static float sigmoid_derivative_scalar(const float input)
-		{
-			return input * (1 - input);
-		}
-		static inline auto sigmoid = xt::vectorize(sigmoid_scalar);
-		static inline auto sigmoid_derivative = xt::vectorize(sigmoid_derivative_scalar);
-
 		virtual void build(std::vector<std::size_t>& shape) = 0;
 		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const = 0;
 		virtual void get_trainable_vars(TrainableVars& trainable_vars) = 0;

@@ -5,6 +5,8 @@
 
 namespace nn
 {
+    enum class Activation;
+
     class LayerDense : public Layer
     {
     protected:
@@ -13,9 +15,10 @@ namespace nn
         xt::xarray<float> weights;
         xt::xarray<float> biases;
         std::size_t outputs_number = 0;
+        Activation activation;
 
     public:
-        LayerDense(std::size_t outputs_number);
+        LayerDense(std::size_t outputs_number, Activation activation);
         virtual void build(std::vector<size_t>& input_shape) override; 
         virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
         virtual void get_trainable_vars(TrainableVars& trainable_vars) override;

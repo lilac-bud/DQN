@@ -1,13 +1,13 @@
 ﻿{
-    "version": 4,
-    "configurePresets": [
-      {
-        "name": "dqn",
-        "displayName": "DQN",
-        "binaryDir": "${sourceDir}/build",
-        "cacheVariables": {
-          "CMAKE_BUILD_TYPE": "Release"
-        }
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "dqn",
+      "displayName": "DQN",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
-    ]
+    }
+  ]
 }

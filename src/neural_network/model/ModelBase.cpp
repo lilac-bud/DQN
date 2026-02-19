@@ -1,5 +1,6 @@
 #include "neural_network/model/ModelBase.h"
 #include "neural_network/layers/Layer.h"
+
 #include <xtensor/io/xjson.hpp>
 #include <fstream>
 

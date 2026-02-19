@@ -1,13 +1,17 @@
 #include "neural_network/layers/LayerConv2D.h"
+#include "neural_network/utils/ActivationFunctions.h"
+#include "neural_network/utils/ConvoluteFunction.h"
+
 #include <xtensor/misc/xpad.hpp>
 #include <xtensor/generators/xrandom.hpp>
 #include <xtensor/io/xio.hpp>
 
-nn::LayerConv2D::LayerConv2D(std::size_t filters_number, KernelSize kernel_size, Padding padding)
+nn::LayerConv2D::LayerConv2D(std::size_t filters_number, KernelSize kernel_size, Padding padding, Activation activation)
 {
 	this->filters_number = filters_number;
 	std::tie(kernel_height, kernel_width) = kernel_size;
 	this->padding = padding;
+	this->activation = activation;
 	biases = xt::random::rand<float>({ filters_number }, lower_rand_bound, upper_rand_bound);
 }
 
@@ -45,7 +49,7 @@ void nn::LayerConv2D::forward(xt::xarray<float>& inputs) const
 	std::vector<std::size_t> shape(outputs_shape);
 	shape[batch_size_axis] = inputs.shape()[batch_size_axis];
 	auto linear_res = convolute(padding == Padding::Same ? xt::pad(inputs, pads) : inputs, filters, shape) + biases;
-	inputs = sigmoid(linear_res);
+	inputs = activate(linear_res, activation);
 }
 
 void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
@@ -78,7 +82,7 @@ void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray
 
 	//again, convolute operation requares channels axes to allign, so to get new deltas filters need to be transposed
 	auto res = convolute(xt::pad(deltas, pads), xt::swapaxes(filters, batch_size_axis, channels_axis), inputs.shape());
-	deltas = res * sigmoid_derivative(inputs);
+	deltas = res * get_derivative(inputs, activation);
 }
 
 void nn::LayerConv2D::get_trainable_vars(TrainableVars& trainable_vars)

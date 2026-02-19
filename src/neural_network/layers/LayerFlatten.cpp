@@ -1,4 +1,5 @@
 #include "neural_network/layers/LayerFlatten.h"
+
 #include <xtensor/core/xlayout.hpp>
 
 void nn::LayerFlatten::build(std::vector<std::size_t>& input_shape)

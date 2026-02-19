@@ -1,4 +1,5 @@
 #include "neural_network/layers/LayerMaxPooling2D.h"
+
 #include <xtensor/views/xview.hpp>
 #include <xtensor/views/xindex_view.hpp>
 
