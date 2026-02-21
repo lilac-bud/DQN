@@ -2,9 +2,33 @@
 #include "neural_network/layers/Layer.h"
 
 #include <xtensor/io/xjson.hpp>
+#include <xtensor/containers/xadapt.hpp>
 #include <fstream>
 
 nn::ModelBase::~ModelBase() = default;
+
+void nn::ModelBase::build(std::vector<std::size_t> input_shape) const
+{
+	for (auto& layer : layers)
+		layer->build(input_shape);
+}
+
+xt::xarray<xt::xarray<float>> nn::ModelBase::get_gradient(xt::xarray<float> outputs, Tape& tape) const
+{
+	nn::GradientMap gradient_map;
+	get_gradient(outputs, 1, tape, gradient_map);
+	std::vector<xt::xarray<float>> gradient;
+	gradient.reserve(gradient_map.size());
+	for (auto i = gradient_map.begin(); i != gradient_map.end(); i++)
+		gradient.push_back(i->second);
+	return xt::adapt(gradient);
+}
+
+void nn::ModelBase::get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, Tape& tape, GradientMap& gradient_map) const
+{
+	for (auto layer_it = layers.rbegin(); layer_it != layers.rend(); layer_it++)
+		(*layer_it)->backward(outputs, deltas, tape, gradient_map);
+}
 
 nn::TrainableVars nn::ModelBase::get_trainable_vars() const
 {

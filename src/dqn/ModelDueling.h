@@ -3,7 +3,6 @@
 
 #include "neural_network/model/ModelBase.h"
 #include "neural_network/model/ModelCall.h"
-#include "neural_network/utils/GradientMapFwd.h"
 
 #include <array>
 
@@ -53,15 +52,17 @@ namespace dqn
 		};
 
 		void call_layers_part(LayersPartName layers_part_name, xt::xarray<float>& inputs, nn::Tape* tape) const;
-		void get_gradient_from_layers_part(LayersPartName layers_part_name, nn::Tape& tape, nn::GradientMap& gradient_map,
-			xt::xarray<float>& deltas) const;
+		void get_gradient_from_layers_part(LayersPartName layers_part_name, xt::xarray<float>& outputs, xt::xarray<float>& deltas, 
+			nn::Tape& tape, nn::GradientMap& gradient_map) const;
 
 		virtual xt::xarray<float> call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const override;
+		virtual void get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, nn::Tape& tape, 
+			nn::GradientMap& gradient_map) const override;
 
 	public:
 		ModelDueling();
 		virtual void build(std::vector<std::size_t> input_shape) const override;
-		virtual xt::xarray<xt::xarray<float>> get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const override;
+		using ModelBase::get_gradient;
 	};
 }
 

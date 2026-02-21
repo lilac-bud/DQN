@@ -23,16 +23,17 @@ void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 	inputs = activate(linear_res, activation);
 }
 
-void nn::LayerDense::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
+void nn::LayerDense::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
 	const auto& inputs = tape[this];
+	deltas *= get_derivative(outputs, activation);
 	auto transposed_deltas = xt::view(xt::transpose(deltas), xt::all(), xt::newaxis(), xt::all());
 	auto weight_derivative = xt::sum(transposed_deltas * xt::transpose(inputs), { input_axis + 1 });
 	auto biases_derivative = xt::sum(deltas, { batch_size_axis });
 	gradient_map.insert({ {this, TrainableVarsType::Weights}, weight_derivative });
 	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
-	auto res = xt::sum(xt::transpose(weights) * xt::view(deltas, xt::all(), xt::newaxis(), xt::all()), { input_axis + 1 });
-	deltas = res * get_derivative(inputs, activation);
+	deltas = xt::sum(xt::transpose(weights) * xt::view(deltas, xt::all(), xt::newaxis(), xt::all()), { input_axis + 1 });
+	outputs = inputs;
 }
 
 void nn::LayerDense::get_trainable_vars(TrainableVars& trainable_vars)

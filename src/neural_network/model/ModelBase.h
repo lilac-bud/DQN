@@ -2,6 +2,7 @@
 #define NEURALNETWORK_MODELBASE_H
 
 #include "neural_network/utils/TapeFwd.h"
+#include "neural_network/utils/GradientMapFwd.h"
 
 #include <vector>
 #include <string>
@@ -31,14 +32,18 @@ namespace nn
 	public:
 		~ModelBase();
 
-		virtual void build(std::vector<std::size_t> input_shape) const = 0;
-		virtual xt::xarray<xt::xarray<float>> get_gradient(Tape& tape, xt::xarray<float> deltas) const = 0;
-
 		TrainableVars get_trainable_vars() const;
 		TrainableVars get_trainable_vars_fixed() const;
 		void save_weights(const std::string filename) const;
 		void load_weights(const std::string filename) const;
 		void print_trainable_vars() const;
+
+		xt::xarray<xt::xarray<float>> get_gradient(xt::xarray<float> outputs, Tape& tape) const;
+
+		virtual void build(std::vector<std::size_t> input_shape) const;
+
+	protected:
+		virtual void get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, Tape& tape, GradientMap& gradient_map) const;
 	};
 }
 

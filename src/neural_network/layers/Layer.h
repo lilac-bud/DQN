@@ -30,7 +30,7 @@ namespace nn
 
 	public:
 		virtual void build(std::vector<std::size_t>& shape) = 0;
-		virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const = 0;
+		virtual void backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const = 0;
 		virtual void get_trainable_vars(TrainableVars& trainable_vars) = 0;
 		virtual void get_trainable_vars(TrainableVarsMap& trainable_vars_map) = 0;
 		virtual void print_trainable_vars() const = 0;

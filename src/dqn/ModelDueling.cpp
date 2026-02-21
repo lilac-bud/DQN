@@ -5,9 +5,9 @@
 #include "neural_network/layers/LayerDense.h"
 #include "neural_network/utils/ActivationFunctions.h"
 
-#include <xtensor/containers/xadapt.hpp>
 #include <xtensor/views/xview.hpp>
 
+using namespace xt::placeholders;
 using Axis = int;
 
 dqn::ModelDueling::ModelDueling()
@@ -61,7 +61,7 @@ void dqn::ModelDueling::build(std::vector<std::size_t> input_shape) const
 	{
 		//to get advantage function actions need to be concatenated with the state
 		//that's why shape is also modifyed
-		if (great_part != ConvGreatPart)
+		if (great_part == FlatGreatPart)
 			shapes[ActionsBranch][Axis{ 1 }] += shapes[StateBranch][Axis{ 1 }];
 		auto& great_part_names = parts_names[great_part];
 		for (int branch = StateBranch; branch != BranchesTotal; branch++)
@@ -76,19 +76,19 @@ void dqn::ModelDueling::call_layers_part(LayersPartName layers_part_name, xt::xa
 		layer->forward(inputs, tape);
 }
 
-void dqn::ModelDueling::get_gradient_from_layers_part(LayersPartName layers_part_name, nn::Tape& tape, 
-	nn::GradientMap& gradient_map, xt::xarray<float>& deltas) const
+void dqn::ModelDueling::get_gradient_from_layers_part(LayersPartName layers_part_name, xt::xarray<float>& outputs, xt::xarray<float>& deltas,
+	nn::Tape& tape, nn::GradientMap& gradient_map) const
 {
 	auto& cur_layer_part = layers_parts[layers_part_name];
 	for (auto layer_it = cur_layer_part.rbegin(); layer_it != cur_layer_part.rend(); layer_it++)
-		(*layer_it)->backward(tape, gradient_map, deltas);
+		(*layer_it)->backward(deltas, outputs, tape, gradient_map);
 }
 
 xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const
 {
 	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; great_part++)
 	{
-		if (great_part != ConvGreatPart)
+		if (great_part == FlatGreatPart)
 		{
 			//to get advantage function actions need to be concatenated with the state
 			auto& [state, actions] = inputs;
@@ -102,16 +102,17 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>
 	return value + advantage;
 }
 
-xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(nn::Tape& tape, xt::xarray<float> deltas) const
+void dqn::ModelDueling::get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, nn::Tape& tape,
+	nn::GradientMap& gradient_map) const
 {
-	nn::GradientMap gradient_map;
-	deltas = nn::sigmoid_derivative(deltas);
+	std::array<xt::xarray<float>, BranchesTotal> branch_outputs;
 	std::array<xt::xarray<float>, BranchesTotal> branch_deltas;
+	branch_outputs.fill(outputs / 2);
 	branch_deltas.fill(deltas);
 	//we need to go backwards to get the gradient
 	for (int great_part = FlatGreatPart; great_part >= ConvGreatPart; great_part--)
 	{
-		if (great_part != FlatGreatPart)
+		if (great_part == ConvGreatPart)
 		{
 			auto& [state_deltas, actions_deltas] = branch_deltas;
 			//since actions have been concatenated during the call, the following needs to be done:
@@ -119,19 +120,16 @@ xt::xarray<xt::xarray<float>> dqn::ModelDueling::get_gradient(nn::Tape& tape, xt
 			//	2. only second half of actions deltas must be left
 			//actions break point corresponds to state deltas size
 			std::size_t actions_break_point = state_deltas.shape()[Axis{ 1 }];
-			std::size_t actions_size = actions_deltas.shape()[Axis{ 1 }];
 			auto actions_deltas_half = xt::view(actions_deltas, xt::all(), xt::range(0, actions_break_point));
 			//extra axis is temporarily added to get rid of actions deltas batch size
 			state_deltas = xt::sum(xt::view(state_deltas, xt::all(), xt::newaxis()) + actions_deltas_half, { Axis{1} });
-			actions_deltas = xt::view(actions_deltas, xt::all(), xt::range(actions_break_point, actions_size));
+			actions_deltas = xt::view(actions_deltas, xt::all(), xt::range(actions_break_point, _));
+			//the same must be done for outputs
+			auto& action_outputs = branch_outputs[ActionsBranch];
+			action_outputs = xt::view(action_outputs, xt::all(), xt::range(actions_break_point, _));
 		}
 		auto& great_part_names = parts_names[great_part];
 		for (int branch = ActionsBranch; branch >= StateBranch; branch--)
-			get_gradient_from_layers_part(great_part_names[branch], tape, gradient_map, branch_deltas[branch]);
+			get_gradient_from_layers_part(great_part_names[branch], branch_outputs[branch], branch_deltas[branch], tape, gradient_map);
 	}
-	std::vector<xt::xarray<float>> gradient;
-	gradient.reserve(gradient_map.size());
-	for (auto i = gradient_map.begin(); i != gradient_map.end(); i++)
-		gradient.push_back(i->second);
-	return xt::adapt(gradient);
 }

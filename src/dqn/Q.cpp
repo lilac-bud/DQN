@@ -10,6 +10,7 @@
 #include <ctime>
 #include <array>
 #include <algorithm>
+
 #define USE_MULTITHREADING_IN_Q 1
 #if USE_MULTITHREADING_IN_Q
 #include <mutex>
@@ -269,7 +270,7 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 	const Transition& transition = trace[trace_index];
 	nn::Tape tape;
 	const auto l_value = model_local.call({ transition.state, transition.action }, &tape);
-	const auto grads = model_local.get_gradient(tape, l_value);
+	const auto grads = model_local.get_gradient(l_value, tape);
 	float target = transition.reward;
 	if (transition.done)
 		target += Q::gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;

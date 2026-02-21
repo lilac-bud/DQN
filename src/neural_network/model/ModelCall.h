@@ -4,7 +4,6 @@
 #include "neural_network/utils/TapeFwd.h"
 
 #include <array>
-#include <vector>
 #include <xtensor/containers/xarray.hpp>
 
 namespace nn

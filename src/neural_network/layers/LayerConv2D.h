@@ -35,7 +35,7 @@ namespace nn
     public:
         LayerConv2D(std::size_t filters_number, KernelSize kernel_size, Padding padding, Activation activation);
         virtual void build(std::vector<std::size_t>& shape) override;
-        virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
+        virtual void backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const override;
         virtual void get_trainable_vars(TrainableVars& trainable_vars) override;
         virtual void get_trainable_vars(TrainableVarsMap& trainable_vars_map) override;
         virtual void print_trainable_vars() const override;

@@ -52,9 +52,10 @@ void nn::LayerConv2D::forward(xt::xarray<float>& inputs) const
 	inputs = activate(linear_res, activation);
 }
 
-void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
+void nn::LayerConv2D::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
 	const auto& inputs = tape[this];
+	deltas *= get_derivative(outputs, activation);
 
 	//to get weight derivative properly the following needs to be considered
 	//	1. deltas are used as filters in convolute operation
@@ -81,8 +82,8 @@ void nn::LayerConv2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray
 	gradient_map.insert({ {this, TrainableVarsType::Biases}, biases_derivative });
 
 	//again, convolute operation requares channels axes to allign, so to get new deltas filters need to be transposed
-	auto res = convolute(xt::pad(deltas, pads), xt::swapaxes(filters, batch_size_axis, channels_axis), inputs.shape());
-	deltas = res * get_derivative(inputs, activation);
+	deltas = convolute(xt::pad(deltas, pads), xt::swapaxes(filters, batch_size_axis, channels_axis), inputs.shape());
+	outputs = inputs;
 }
 
 void nn::LayerConv2D::get_trainable_vars(TrainableVars& trainable_vars)

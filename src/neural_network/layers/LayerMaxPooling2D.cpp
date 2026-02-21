@@ -35,23 +35,24 @@ void nn::LayerMaxPooling2D::forward(xt::xarray<float>& inputs) const
 	inputs = outputs;
 }
 
-void nn::LayerMaxPooling2D::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
+void nn::LayerMaxPooling2D::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
-	xt::xarray<float> inputs = tape[this];
+	const auto& inputs = tape[this];
+	xt::xarray<float> new_deltas = inputs;
 	for (std::size_t i = 0; i < outputs_shape[height_axis]; i++)
 	{
-		const std::size_t inputs_i = i * pool_height;
-		auto height_range = xt::range(inputs_i, inputs_i + pool_height);
+		const std::size_t i_start = i * pool_height;
+		auto height_range = xt::range(i_start, i_start + pool_height);
 		for (std::size_t k = 0; k < outputs_shape[width_axis]; k++)
 		{
-			std::size_t inputs_k = k * pool_width;
-			auto pool = xt::view(inputs, xt::all(), height_range, xt::range(inputs_k, inputs_k + pool_width));
-			//amax reduces the number of dimensions, but we need to preserve them for filtration
-			auto max = xt::view(xt::amax(pool, { height_axis, width_axis }), xt::all(), xt::newaxis(), xt::newaxis());
+			std::size_t k_start = k * pool_width;
+			auto pool = xt::view(new_deltas, xt::all(), height_range, xt::range(k_start, k_start + pool_width));
+			auto max = xt::view(outputs, xt::all(), xt::range(i, i + 1), xt::range(k, k + 1));
 			xt::filtration(pool, pool < max) = 0;
 			xt::filtration(pool, pool > 0) = 1;
 			pool *= xt::view(deltas, xt::all(), xt::range(i, i + 1), xt::range(k, k + 1));
 		}
 	}
-	deltas = inputs;
+	deltas = new_deltas;
+	outputs = inputs;
 }

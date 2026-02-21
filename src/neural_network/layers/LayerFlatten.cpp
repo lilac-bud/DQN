@@ -15,7 +15,9 @@ void nn::LayerFlatten::forward(xt::xarray<float>& inputs) const
 	inputs.reshape({ inputs.shape()[batch_size_axis], outputs_number });
 }
 
-void nn::LayerFlatten::backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const
+void nn::LayerFlatten::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
-	deltas.reshape(tape[this].shape());
+	const auto& inputs = tape[this];
+	deltas.reshape(inputs.shape());
+	outputs = inputs;
 }

@@ -20,7 +20,7 @@ namespace nn
     public:
         LayerDense(std::size_t outputs_number, Activation activation);
         virtual void build(std::vector<size_t>& input_shape) override; 
-        virtual void backward(Tape& tape, GradientMap& gradient_map, xt::xarray<float>& deltas) const override;
+        virtual void backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const override;
         virtual void get_trainable_vars(TrainableVars& trainable_vars) override;
         virtual void get_trainable_vars(TrainableVarsMap& trainable_vars_map) override;
         virtual void print_trainable_vars() const override;
