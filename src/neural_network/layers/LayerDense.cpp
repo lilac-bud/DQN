@@ -26,7 +26,7 @@ void nn::LayerDense::forward(xt::xarray<float>& inputs) const
 void nn::LayerDense::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
 	const auto& inputs = tape[this];
-	deltas *= get_derivative(outputs, activation);
+	deltas *= derive(outputs, activation);
 	auto transposed_deltas = xt::view(xt::transpose(deltas), xt::all(), xt::newaxis(), xt::all());
 	auto weight_derivative = xt::sum(transposed_deltas * xt::transpose(inputs), { input_axis + 1 });
 	auto biases_derivative = xt::sum(deltas, { batch_size_axis });

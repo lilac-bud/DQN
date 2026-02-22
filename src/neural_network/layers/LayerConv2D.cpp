@@ -55,7 +55,7 @@ void nn::LayerConv2D::forward(xt::xarray<float>& inputs) const
 void nn::LayerConv2D::backward(xt::xarray<float>& outputs, xt::xarray<float>& deltas, Tape& tape, GradientMap& gradient_map) const
 {
 	const auto& inputs = tape[this];
-	deltas *= get_derivative(outputs, activation);
+	deltas *= derive(outputs, activation);
 
 	//to get weight derivative properly the following needs to be considered
 	//	1. deltas are used as filters in convolute operation

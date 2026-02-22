@@ -3,6 +3,7 @@
 
 #include <xtensor/core/xvectorize.hpp>
 #include <cmath>
+#include <unordered_map>
 
 namespace nn
 {
@@ -41,7 +42,7 @@ namespace nn
 		}
 	}
 	template<class E>
-	auto get_derivative(const xt::xexpression<E>& input, Activation activation)
+	auto derive(const xt::xexpression<E>& input, Activation activation)
 	{
 		switch (activation)
 		{

@@ -42,8 +42,8 @@ namespace nn
 
 		virtual void build(std::vector<std::size_t> input_shape) const;
 
-	protected:
-		virtual void get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, Tape& tape, GradientMap& gradient_map) const;
+	private:
+		virtual void backward(xt::xarray<float>& outputs, xt::xarray<float> deltas, Tape& tape, GradientMap& gradient_map) const;
 	};
 }
 

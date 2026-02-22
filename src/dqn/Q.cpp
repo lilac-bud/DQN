@@ -26,6 +26,13 @@ struct PreviousStateAction
 	xt::xarray<float> state;
 	xt::xarray<float> action;
 	bool empty = true;
+
+	PreviousStateAction() = default;
+	PreviousStateAction(xt::xarray<float> state, xt::xarray<float> action) : empty(false)
+	{
+		this->state = state;
+		this->action = action;
+	}
 };
 
 struct Transition
@@ -92,7 +99,10 @@ private:
 	}
 
 public:
-	~QPrivate();
+	~QPrivate()
+	{
+		save();
+	}
 
 	std::array<std::size_t, 4> shape;
 	PreviousStateAction prev_record;
@@ -117,64 +127,12 @@ dqn::Q::Q(std::size_t field_height, std::size_t field_width, std::size_t channel
 
 dqn::Q::~Q() = default;
 
-dqn::Q::QPrivate::QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
-	const std::string player_id, const std::string filepath)
-{
-	shape = { 1, field_height, field_width, channels_number };
-	std::vector<std::size_t> shape_for_build{ shape.begin(), shape.end() };
-	model_local.build(shape_for_build);
-	model_target.build(shape_for_build);
-	const std::string common_part = filepath + std::string("qdb") + std::to_string(field_height) + std::string("x") +
-		std::to_string(field_width) + std::string("_") + player_id;
-	model_local_filename = common_part + "_local.json";
-	model_target_filename = common_part + "_target.json";
-	parameters_filename = common_part + "_parameters.json";
-	load();
-}
-
-dqn::Q::QPrivate::~QPrivate()
-{
-	save();
-}
-
 void dqn::Q::soft_reset()
 {
 	QP->prev_record = PreviousStateAction();
 }
 
-void dqn::Q::QPrivate::save() const
-{
-	model_local.save_weights(model_local_filename);
-	model_target.save_weights(model_target_filename);
-	const nlohmann::json parameters = {
-		{"eps", eps},
-		{"beta", beta},
-		{"update_count", update_count} };
-	std::ofstream out_file(parameters_filename);
-	out_file << parameters.dump();
-	out_file.close();
-}
-
-void dqn::Q::QPrivate::load()
-{
-	if (std::filesystem::exists(model_local_filename) && std::filesystem::exists(model_local_filename) 
-		&& std::filesystem::exists(parameters_filename))
-	{
-		model_local.load_weights(model_local_filename);
-		model_target.load_weights(model_target_filename);
-		nlohmann::json parameters;
-		std::ifstream in_file(parameters_filename);
-		in_file >> parameters;
-		in_file.close();
-		eps = parameters["eps"];
-		beta = parameters["beta"];
-		update_count = parameters["update_count"];
-	}
-	else
-		global_update();
-}
-
-int dqn::Q::call_network(float prev_reward, const std::vector<float>& state, const std::vector<float>& actions, 
+int dqn::Q::call_network(float prev_reward, const std::vector<float>& state, const std::vector<float>& actions,
 	std::size_t actions_number)
 {
 	std::array shape = QP->shape;
@@ -216,6 +174,53 @@ int dqn::Q::call_network_debug(float prev_reward)
 	return call_network_debug(prev_reward, QP->random_number(lower_debug, upper_debug));
 }
 
+dqn::Q::QPrivate::QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
+	const std::string player_id, const std::string filepath)
+{
+	shape = { 1, field_height, field_width, channels_number };
+	std::vector<std::size_t> shape_for_build{ shape.begin(), shape.end() };
+	model_local.build(shape_for_build);
+	model_target.build(shape_for_build);
+	const std::string common_part = filepath + std::string("qdb") + std::to_string(field_height) + std::string("x") +
+		std::to_string(field_width) + std::string("_") + player_id;
+	model_local_filename = common_part + "_local.json";
+	model_target_filename = common_part + "_target.json";
+	parameters_filename = common_part + "_parameters.json";
+	load();
+}
+
+void dqn::Q::QPrivate::save() const
+{
+	model_local.save_weights(model_local_filename);
+	model_target.save_weights(model_target_filename);
+	const nlohmann::json parameters = {
+		{"eps", eps},
+		{"beta", beta},
+		{"update_count", update_count} };
+	std::ofstream out_file(parameters_filename);
+	out_file << parameters.dump();
+	out_file.close();
+}
+
+void dqn::Q::QPrivate::load()
+{
+	if (std::filesystem::exists(model_local_filename) && std::filesystem::exists(model_local_filename) 
+		&& std::filesystem::exists(parameters_filename))
+	{
+		model_local.load_weights(model_local_filename);
+		model_target.load_weights(model_target_filename);
+		nlohmann::json parameters;
+		std::ifstream in_file(parameters_filename);
+		in_file >> parameters;
+		in_file.close();
+		eps = parameters["eps"];
+		beta = parameters["beta"];
+		update_count = parameters["update_count"];
+	}
+	else
+		global_update();
+}
+
 Best dqn::Q::QPrivate::find_best(const xt::xarray<float>& state, const xt::xarray<float>& actions, const ModelDueling& model) const
 {
 	const auto values = model.call({ state, actions });
@@ -230,7 +235,7 @@ std::size_t dqn::Q::QPrivate::get_act(float prev_reward, const xt::xarray<float>
 		update(prev_reward, state, actions, false);
 	const std::size_t act_index = random_float() < eps ?
 		random_number(0, inputs_number(actions)) : find_best(state, actions, model_local).index;
-	prev_record = { state, xt::view(actions, xt::range(act_index, act_index + 1), xt::all()), false };
+	prev_record = { state, xt::view(actions, xt::range(act_index, act_index + 1)) };
 	return act_index;
 }
 

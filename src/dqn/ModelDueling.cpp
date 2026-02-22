@@ -76,7 +76,7 @@ void dqn::ModelDueling::call_layers_part(LayersPartName layers_part_name, xt::xa
 		layer->forward(inputs, tape);
 }
 
-void dqn::ModelDueling::get_gradient_from_layers_part(LayersPartName layers_part_name, xt::xarray<float>& outputs, xt::xarray<float>& deltas,
+void dqn::ModelDueling::backward_layers_part(LayersPartName layers_part_name, xt::xarray<float>& outputs, xt::xarray<float>& deltas,
 	nn::Tape& tape, nn::GradientMap& gradient_map) const
 {
 	auto& cur_layer_part = layers_parts[layers_part_name];
@@ -102,7 +102,7 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>
 	return value + advantage;
 }
 
-void dqn::ModelDueling::get_gradient(xt::xarray<float>& outputs, xt::xarray<float> deltas, nn::Tape& tape,
+void dqn::ModelDueling::backward(xt::xarray<float>& outputs, xt::xarray<float> deltas, nn::Tape& tape,
 	nn::GradientMap& gradient_map) const
 {
 	std::array<xt::xarray<float>, BranchesTotal> branch_outputs;
@@ -130,6 +130,6 @@ void dqn::ModelDueling::get_gradient(xt::xarray<float>& outputs, xt::xarray<floa
 		}
 		auto& great_part_names = parts_names[great_part];
 		for (int branch = ActionsBranch; branch >= StateBranch; branch--)
-			get_gradient_from_layers_part(great_part_names[branch], branch_outputs[branch], branch_deltas[branch], tape, gradient_map);
+			backward_layers_part(great_part_names[branch], branch_outputs[branch], branch_deltas[branch], tape, gradient_map);
 	}
 }
