@@ -9,7 +9,7 @@
 <!-- TOC-->
   - [1. Установка](#installation)
   - [2. Использование](#use)
-  - [3. Внутреннее устройство](#internall_working)
+  - [3. Внутреннее устройство](#internal_working)
     - [3.1 neural_network](#neural_network)
       - [3.1.1 utils](#utils)
       - [3.1.2 layers](#layers)
