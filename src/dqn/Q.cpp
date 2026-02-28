@@ -63,13 +63,15 @@ private:
 	static constexpr float max_priority = 1.0f;
 	static constexpr std::array shape_scalar{ 1 };
 
+	const QParameters parameters;
+
 	std::string model_local_filename;
 	std::string model_target_filename;
 	std::string parameters_filename;
-	float eps = Q::max_eps;
-	float beta = Q::beta_min;
-	int update_count = Q::update_target;
-	int train_count = Q::train_local;
+	float eps = parameters.max_eps;
+	float beta = parameters.beta_min;
+	int update_count = parameters.update_target;
+	int train_count = parameters.train_local;
 
 	ModelDueling model_local;
 	ModelDueling model_target;
@@ -109,6 +111,8 @@ public:
 
 	QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
 		const std::string player_id, const std::string filepath);
+	QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
+		const std::string player_id, const std::string filepath, const QParameters& parameters_to_set);
 	std::size_t get_act(float prev_reward, const xt::xarray<float>& state, const xt::xarray<float>& actions);
 	void update(float reward, const xt::xarray<float>& afterstate, const xt::xarray<float>& possible_actions, bool done);
 
@@ -119,10 +123,10 @@ public:
 };
 
 dqn::Q::Q(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
-	const std::string player_id, const std::string filepath)
+	const std::string player_id, const std::string filepath, const QParameters& custom_parameters)
 {
 	xt::random::seed(time(nullptr));
-	QP = std::make_unique<QPrivate>(field_height, field_width, channels_number, player_id, filepath);
+	QP = std::make_unique<QPrivate>(field_height, field_width, channels_number, player_id, filepath, custom_parameters);
 }
 
 dqn::Q::~Q() = default;
@@ -189,6 +193,21 @@ dqn::Q::QPrivate::QPrivate(std::size_t field_height, std::size_t field_width, st
 	load();
 }
 
+dqn::Q::QPrivate::QPrivate(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
+	const std::string player_id, const std::string filepath, const QParameters& parameters_to_set) : parameters(parameters_to_set)
+{
+	shape = { 1, field_height, field_width, channels_number };
+	std::vector<std::size_t> shape_for_build{ shape.begin(), shape.end() };
+	model_local.build(shape_for_build);
+	model_target.build(shape_for_build);
+	const std::string common_part = filepath + std::string("qdb") + std::to_string(field_height) + std::string("x") +
+		std::to_string(field_width) + std::string("_") + player_id;
+	model_local_filename = common_part + "_local.json";
+	model_target_filename = common_part + "_target.json";
+	parameters_filename = common_part + "_parameters.json";
+	load();
+}
+
 void dqn::Q::QPrivate::save() const
 {
 	model_local.save_weights(model_local_filename);
@@ -242,7 +261,7 @@ std::size_t dqn::Q::QPrivate::get_act(float prev_reward, const xt::xarray<float>
 Batch dqn::Q::QPrivate::get_batch() const
 {
 	auto adapted_priorities = xt::adapt(priorities);
-	auto index_batch = xt::random::choice(xt::arange(trace.size()), Q::batch_size, adapted_priorities, false);
+	auto index_batch = xt::random::choice(xt::arange(trace.size()), parameters.batch_size, adapted_priorities, false);
 	auto inter_res = xt::index_view(adapted_priorities, index_batch) / xt::sum(adapted_priorities) * trace.size();
 	auto importance_weights = xt::pow(inter_res, -beta) / xt::amax(inter_res);
 	return { index_batch, importance_weights };
@@ -256,7 +275,7 @@ void dqn::Q::QPrivate::train_model()
 #if USE_MULTITHREADING_IN_Q
 	std::vector<std::thread> threads;
 #endif
-	for (std::size_t i = 0; i < Q::batch_size; i++)
+	for (std::size_t i = 0; i < parameters.batch_size; i++)
 #if !USE_MULTITHREADING_IN_Q
 		accumulate_vars_change(vars_change, index_batch(i), importance_weights(i));
 #else
@@ -278,16 +297,16 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 	const auto grads = model_local.get_gradient(l_value, tape);
 	float target = transition.reward;
 	if (transition.done)
-		target += Q::gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
+		target += parameters.gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
 	const float td_error = target - l_value.TO_SCALAR;
 	{
 #if USE_MULTITHREADING_IN_Q
 		std::lock_guard<std::mutex> lg(vars_change_mutex);
 #endif
-		vars_change += Q::alpha * importance_weight * td_error * grads;
+		vars_change += parameters.alpha * importance_weight * td_error * grads;
 	}
 	//different threads access completely different indeces & no change in the vector's size -> no need to lock
-	priorities[trace_index] = std::pow(std::abs(td_error) + Q::min_priority, Q::priority_scale);
+	priorities[trace_index] = std::pow(std::abs(td_error) + parameters.min_priority, parameters.priority_scale);
 }
 
 void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate, const xt::xarray<float>& possible_actions, bool done)
@@ -300,25 +319,25 @@ void dqn::Q::QPrivate::update(float reward, const xt::xarray<float>& afterstate,
 		possible_actions, 
 		done );
 	add_new_priority();
-	if (trace.size() < Q::min_trace)
+	if (trace.size() < parameters.min_trace)
 		return;
-	else if (trace.size() > Q::max_trace)
+	else if (trace.size() > parameters.max_trace)
 	{
 		trace.erase(trace.begin());
 		priorities.erase(priorities.begin());
 	}
-	if (train_count < Q::train_local)
+	if (train_count < parameters.train_local)
 	{
 		train_count++;
 		return;
 	}
 	train_model();
 	train_count = 0;
-	if (eps > Q::min_eps)
-		eps -= Q::eps_decr;
+	if (eps > parameters.min_eps)
+		eps -= parameters.eps_decr;
 	if (beta < 1)
-		beta += Q::beta_incr;
-	if (update_count < Q::update_target)
+		beta += parameters.beta_incr;
+	if (update_count < parameters.update_target)
 	{
 		update_count++;
 		return;

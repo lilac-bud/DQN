@@ -15,11 +15,7 @@ namespace nn
 		virtual xt::xarray<float> call_with_tape(std::array<xt::xarray<float>, inputs_number>& inputs, Tape* tape) const = 0;
 
 	public:
-		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs) const
-		{
-			return call_with_tape(inputs, nullptr);
-		}
-		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs, Tape* tape) const
+		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs, Tape* tape = nullptr) const
 		{
 			return call_with_tape(inputs, tape);
 		}
