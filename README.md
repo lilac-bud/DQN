@@ -42,25 +42,27 @@ cmake --install build --prefix <your_install_prefix>
 
 namespace dqn
 {
+	//parameters to configure dqn
+	struct QParameters
+	{
+		float alpha = 0.00025f;
+		float gamma = 0.95f;
+		float min_eps = 0.1f;
+		float max_eps = 0.95f;
+		float eps_decr = 0.0001f;
+		float beta_min = 0.4f;
+		float beta_incr = 0.00005f;
+		float priority_scale = 0.6f;
+		float min_priority = 0.1f;
+		int update_target = 300;
+		int train_local = 10;
+		std::size_t batch_size = 10;
+		std::size_t min_trace = 15;
+		std::size_t max_trace = 500;
+	};
+
 	class Q final
 	{
-	public:
-		//parameters to configure dqn
-		static constexpr float alpha = 0.00025f;
-		static constexpr float gamma = 0.95f;
-		static constexpr float min_eps = 0.1f;
-		static constexpr float max_eps = 0.95f;
-		static constexpr float eps_decr = 0.0001f;
-		static constexpr float beta_min = 0.4f;
-		static constexpr float beta_incr = 0.00005f;
-		static constexpr float priority_scale = 0.6f;
-		static constexpr float min_priority = 0.1f;
-		static const int update_target = 300;
-		static const int train_local = 10;
-		static const std::size_t batch_size = 10;
-		static const std::size_t min_trace = 15;
-		static const std::size_t max_trace = 500;
-
 	private:
 		class QPrivate;
 		std::unique_ptr<QPrivate> QP;
@@ -70,8 +72,8 @@ namespace dqn
 		static const std::size_t upper_debug = 45;
 
 	public:
-		Q(std::size_t field_height, std::size_t field_width, std::size_t channels_number,
-			const std::string player_id, const std::string filepath);
+		Q(std::size_t field_height, std::size_t field_width, std::size_t channels_number, const std::string player_id, 
+			const std::string filepath, const QParameters& custom_parameters = QParameters());
 		~Q();
 		void soft_reset();
 		int call_network(float prev_reward, const std::vector<float>& state,
@@ -84,7 +86,7 @@ namespace dqn
 
 #endif
 ```
-В классе используются следующие константы, которые можно изменять для настройки обучения:
+В классе используются следующие параметры, которые можно изменять для настройки обучения:
 * alpha – скорость обучения;
 * gamma – параметр уценки;
 * min_eps – минимальное значение ϵ;
@@ -100,7 +102,7 @@ namespace dqn
 * min_trace – минимальный размер истории переходов;
 * max_trace – максимальный размер истории переходов. Этот параметр значительно влияет на количество используемой памяти.
 
-Для вызова конструктора класса Q необходимо указать размеры игрового поля и число каналов, которое соответствует количеству типов информации о ячейке игрового поля (например, находится ли в ней вражеский юнит). Также нужно указать ID игрока, для которого Q будет выбирать действие, и путь к папке для сохранений.
+Для вызова конструктора класса Q необходимо указать размеры игрового поля и число каналов, которое соответствует количеству типов информации о ячейке игрового поля (например, находится ли в ней вражеский юнит). Также нужно указать ID игрока, для которого Q будет выбирать действие, и путь к папке для сохранений. При желании можно задать кастомные параметры, которые были описаны выше.
 
 Метод soft_reset вызывается по окончании игры (эпизода обучения) для того, чтобы модель могла быть использована для следующей игры.
 
@@ -463,7 +465,7 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>
 
 Хедер Q.h уже был описан ранее. Как можно заметить, класс Q написан с использованием идиомы Pimpl, в соответствии с которой объявление приватных структур, переменных и методов перенесено в Q.cpp.
 
-Далее будут рассмотрены подробно только методы QPrivate, непосредственно связанные с реализаций алгоритма DQN.
+Далее будут рассмотрены подробно только методы QPrivate, непосредственно связанные с реализаций [алгоритма DQN](https://github.com/lilac-bud/TurnBasedStrategy-DQN#learning).
 
 Для получения индекса действия вызывается get_act. Если были записаны предыдущие состояние и выбранное действие, то вызывается update. После чего выбирается действие. С вероятностью eps оно случайно. В ином случае находится действие с самым большим значением, полученным от вызова локальной модели. Так или иначе состояние и выбранное действие записываются, а выбранный индекс возвращается.
 ```C++
@@ -548,7 +550,7 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 	const auto l_value = model_local.call({ transition.state, transition.action }, &tape);
 	const auto grads = model_local.get_gradient(l_value, tape);
 	float target = transition.reward;
-	if (transition.done)
+	if (!transition.done)
 		target += Q::gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
 	const float td_error = target - l_value.TO_SCALAR;
 	{
