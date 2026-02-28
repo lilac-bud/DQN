@@ -296,7 +296,7 @@ void dqn::Q::QPrivate::accumulate_vars_change(xt::xarray<xt::xarray<float>>& var
 	const auto l_value = model_local.call({ transition.state, transition.action }, &tape);
 	const auto grads = model_local.get_gradient(l_value, tape);
 	float target = transition.reward;
-	if (transition.done)
+	if (!transition.done)
 		target += parameters.gamma * find_best(transition.afterstate, transition.possible_actions, model_target).value;
 	const float td_error = target - l_value.TO_SCALAR;
 	{
