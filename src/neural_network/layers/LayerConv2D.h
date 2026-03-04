@@ -18,10 +18,6 @@ namespace nn
     class LayerConv2D : public Layer
     {
     protected:
-        static const Axis height_axis = 1;
-        static const Axis width_axis = 2;
-        static const Axis channels_axis = 3;
-
         xt::xarray<float> filters;
         xt::xarray<float> biases;
         std::vector<std::size_t> outputs_shape;

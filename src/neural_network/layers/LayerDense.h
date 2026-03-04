@@ -14,7 +14,7 @@ namespace nn
 
         xt::xarray<float> weights;
         xt::xarray<float> biases;
-        std::size_t outputs_number = 0;
+        std::size_t outputs_number;
         Activation activation;
 
     public:

@@ -3,7 +3,6 @@
 
 #include <xtensor/core/xvectorize.hpp>
 #include <cmath>
-#include <unordered_map>
 
 namespace nn
 {
@@ -29,29 +28,29 @@ namespace nn
 	inline const auto tanh_derivative = xt::vectorize(tanh_derivative_scalar);
 
 	template<class E>
-	auto activate(const xt::xexpression<E>& input, Activation activation)
+	auto activate(E&& input, Activation activation)
 	{
 		switch (activation)
 		{
 		case Activation::Sigmoid:
-			return sigmoid(input.derived_cast());
+			return sigmoid(std::forward<E>(input));
 		case Activation::Tanh:
-			return tanh(input.derived_cast());
+			return tanh(std::forward<E>(input));
 		default:
-			return identity(input.derived_cast());
+			return identity(std::forward<E>(input));
 		}
 	}
 	template<class E>
-	auto derive(const xt::xexpression<E>& input, Activation activation)
+	auto derive(E&& input, Activation activation)
 	{
 		switch (activation)
 		{
 		case Activation::Sigmoid:
-			return sigmoid_derivative(input.derived_cast());
+			return sigmoid_derivative(std::forward<E>(input));
 		case Activation::Tanh:
-			return tanh_derivative(input.derived_cast());
+			return tanh_derivative(std::forward<E>(input));
 		default:
-			return identity_derivative(input.derived_cast());
+			return identity_derivative(std::forward<E>(input));
 		}
 	}
 }

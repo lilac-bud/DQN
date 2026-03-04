@@ -4,6 +4,7 @@
 #include <xtensor/io/xjson.hpp>
 #include <xtensor/containers/xadapt.hpp>
 #include <fstream>
+#include <ranges>
 
 nn::ModelBase::~ModelBase() = default;
 
@@ -17,16 +18,14 @@ xt::xarray<xt::xarray<float>> nn::ModelBase::get_gradient(xt::xarray<float> outp
 {
 	nn::GradientMap gradient_map;
 	backward(outputs, 1, tape, gradient_map);
-	std::vector<xt::xarray<float>> gradient;
-	gradient.reserve(gradient_map.size());
-	for (auto i = gradient_map.begin(); i != gradient_map.end(); i++)
-		gradient.push_back(i->second);
+	auto values = std::views::values(gradient_map);
+	std::vector<xt::xarray<float>> gradient{ values.begin(), values.end() };
 	return xt::adapt(gradient);
 }
 
 void nn::ModelBase::backward(xt::xarray<float>& outputs, xt::xarray<float> deltas, Tape& tape, GradientMap& gradient_map) const
 {
-	for (auto layer_it = layers.rbegin(); layer_it != layers.rend(); layer_it++)
+	for (auto layer_it = layers.rbegin(); layer_it != layers.rend(); ++layer_it)
 		(*layer_it)->backward(outputs, deltas, tape, gradient_map);
 }
 
@@ -35,9 +34,8 @@ nn::TrainableVars nn::ModelBase::get_trainable_vars() const
 	TrainableVarsMap trainable_vars_map;
 	for (auto& layer : layers)
 		layer->get_trainable_vars(trainable_vars_map);
-	std::vector<xt::xarray<float>*> trainable_vars;
-	for (auto i = trainable_vars_map.begin(); i != trainable_vars_map.end(); i++)
-		trainable_vars.push_back(i->second);
+	auto values = std::views::values(trainable_vars_map);
+	std::vector<xt::xarray<float>*> trainable_vars{ values.begin(), values.end() };
 	return trainable_vars;
 }
 

@@ -57,14 +57,14 @@ void dqn::ModelDueling::build(std::vector<std::size_t> input_shape) const
 {
 	std::array<std::vector<std::size_t>, BranchesTotal> shapes;
 	shapes.fill(input_shape);
-	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; great_part++)
+	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; ++great_part)
 	{
 		//to get advantage function actions need to be concatenated with the state
 		//that's why shape is also modifyed
 		if (great_part == FlatGreatPart)
 			shapes[ActionsBranch][Axis{ 1 }] += shapes[StateBranch][Axis{ 1 }];
 		auto& great_part_names = parts_names[great_part];
-		for (int branch = StateBranch; branch != BranchesTotal; branch++)
+		for (int branch = StateBranch; branch != BranchesTotal; ++branch)
 			for (auto& layer : layers_parts[great_part_names[branch]])
 				layer->build(shapes[branch]);
 	}
@@ -80,22 +80,22 @@ void dqn::ModelDueling::backward_layers_part(LayersPartName layers_part_name, xt
 	nn::Tape& tape, nn::GradientMap& gradient_map) const
 {
 	auto& cur_layer_part = layers_parts[layers_part_name];
-	for (auto layer_it = cur_layer_part.rbegin(); layer_it != cur_layer_part.rend(); layer_it++)
+	for (auto layer_it = cur_layer_part.rbegin(); layer_it != cur_layer_part.rend(); ++layer_it)
 		(*layer_it)->backward(deltas, outputs, tape, gradient_map);
 }
 
 xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const
 {
-	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; great_part++)
+	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; ++great_part)
 	{
 		if (great_part == FlatGreatPart)
 		{
 			//to get advantage function actions need to be concatenated with the state
 			auto& [state, actions] = inputs;
-			actions = concatenate(xtuple(broadcast(state, actions.shape()), actions), Axis{ 1 });
+			actions = xt::concatenate(xt::xtuple(broadcast(state, actions.shape()), actions), Axis{ 1 });
 		}
 		auto& great_part_names = parts_names[great_part];
-		for (int branch = StateBranch; branch != BranchesTotal; branch++)
+		for (int branch = StateBranch; branch != BranchesTotal; ++branch)
 			call_layers_part(great_part_names[branch], inputs[branch], tape);
 	}
 	auto&[value, advantage] = inputs;
@@ -110,7 +110,7 @@ void dqn::ModelDueling::backward(xt::xarray<float>& outputs, xt::xarray<float> d
 	branch_outputs.fill(outputs / 2);
 	branch_deltas.fill(deltas);
 	//we need to go backwards to get the gradient
-	for (int great_part = FlatGreatPart; great_part >= ConvGreatPart; great_part--)
+	for (int great_part = FlatGreatPart; great_part >= ConvGreatPart; --great_part)
 	{
 		if (great_part == ConvGreatPart)
 		{
@@ -129,7 +129,7 @@ void dqn::ModelDueling::backward(xt::xarray<float>& outputs, xt::xarray<float> d
 			action_outputs = xt::view(action_outputs, xt::all(), xt::range(actions_break_point, _));
 		}
 		auto& great_part_names = parts_names[great_part];
-		for (int branch = ActionsBranch; branch >= StateBranch; branch--)
+		for (int branch = ActionsBranch; branch >= StateBranch; --branch)
 			backward_layers_part(great_part_names[branch], branch_outputs[branch], branch_deltas[branch], tape, gradient_map);
 	}
 }
