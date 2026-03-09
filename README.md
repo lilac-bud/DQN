@@ -161,7 +161,7 @@ using GradientMap = std::map<std::pair<const Layer*, TrainableVarsType>, xt::xar
 
 Стоит заметить, что так как частью ключа является указатель, при каждом запуске программы порядок будет другой. В случае обучения это не имеет значения. Главное, чтобы порядок производных был такой же, как у обучаемых параметров.
 
-Наконец, в ConvoluteFunction.h определена операция свёртки. Она принимает на вход выражение, которое нужно свернуть, фильтры и размерность выхода.
+Наконец, в ConvoluteFunctions.h определена операция свёртки. Она принимает на вход выражение, которое нужно свернуть, фильтры и размерность выхода. Аналогично, в PoolFunctions.h определены функции для слоя субдискретизации.
 
 <a name="layers"></a>
 #### 3.1.2 layers
@@ -335,11 +335,7 @@ namespace nn
 		virtual xt::xarray<float> call_with_tape(std::array<xt::xarray<float>, inputs_number>& inputs, Tape* tape) const = 0;
 
 	public:
-		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs) const
-		{
-			return call_with_tape(inputs, nullptr);
-		}
-		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs, Tape* tape) const
+		xt::xarray<float> call(std::array<xt::xarray<float>, inputs_number> inputs, Tape* tape = nullptr) const
 		{
 			return call_with_tape(inputs, tape);
 		}
@@ -527,7 +523,7 @@ void dqn::Q::QPrivate::train_model()
 #if USE_MULTITHREADING_IN_Q
 	std::vector<std::thread> threads;
 #endif
-	for (std::size_t i = 0; i < Q::batch_size; i++)
+	for (std::size_t i = 0; i < Q::batch_size; ++i)
 #if !USE_MULTITHREADING_IN_Q
 		accumulate_vars_change(vars_change, index_batch(i), importance_weights(i));
 #else
@@ -536,7 +532,7 @@ void dqn::Q::QPrivate::train_model()
 	for (auto& thread : threads)
 		thread.join();
 #endif
-	for (std::size_t k = 0; k < trainable_vars.size(); k++)
+	for (std::size_t k = 0; k < trainable_vars.size(); ++k)
 		*trainable_vars[k] += vars_change(k);
 }
 ```

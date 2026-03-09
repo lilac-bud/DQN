@@ -10,13 +10,8 @@ namespace nn
 	class LayerMaxPooling2D : public Layer
 	{
 	protected:
-		static const Axis height_axis = 1;
-		static const Axis width_axis = 2;
-		static const Axis channels_axis = 3;
-
 		std::vector<std::size_t> outputs_shape;
-		std::size_t pool_height;
-		std::size_t pool_width;
+		PoolSize pool_size;
 
 	public:
 		LayerMaxPooling2D(PoolSize pool_size);

@@ -1,6 +1,6 @@
 #include "neural_network/layers/LayerConv2D.h"
 #include "neural_network/utils/ActivationFunctions.h"
-#include "neural_network/utils/ConvoluteFunction.h"
+#include "neural_network/utils/ConvoluteFunctions.h"
 
 #include <xtensor/misc/xpad.hpp>
 #include <xtensor/generators/xrandom.hpp>

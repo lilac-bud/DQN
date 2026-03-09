@@ -13,7 +13,8 @@ target_sources(neural_network
 		FILE_SET HEADERS
 		FILES
 			neural_network/utils/ActivationFunctions.h
-			neural_network/utils/ConvoluteFunction.h
+			neural_network/utils/ConvoluteFunctions.h
+			neural_network/utils/PoolFunctions.h
 			neural_network/utils/TapeFwd.h
 			neural_network/utils/GradientMapFwd.h
 			neural_network/utils/TrainableVarsMapFwd.h

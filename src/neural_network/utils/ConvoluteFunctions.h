@@ -1,5 +1,5 @@
-#ifndef NEURALNETWORK_CONVOLUTEFUNCTION_H
-#define NEURALNETWORK_CONVOLUTEFUNCTION_H
+#ifndef NEURALNETWORK_CONVOLUTEFUNCTIONS_H
+#define NEURALNETWORK_CONVOLUTEFUNCTIONS_H
 
 #include <xtensor/views/xview.hpp>
 #include <xtensor/generators/xbuilder.hpp>
