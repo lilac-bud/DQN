@@ -438,7 +438,7 @@ namespace dqn
 //ModelDueling.cpp
 xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>, 2>& inputs, nn::Tape* tape) const
 {
-	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; great_part++)
+	for (int great_part = ConvGreatPart; great_part != GreatPartsTotal; ++great_part)
 	{
 		if (great_part == FlatGreatPart)
 		{
@@ -447,7 +447,7 @@ xt::xarray<float> dqn::ModelDueling::call_with_tape(std::array<xt::xarray<float>
 			actions = concatenate(xtuple(broadcast(state, actions.shape()), actions), Axis{ 1 });
 		}
 		auto& great_part_names = parts_names[great_part];
-		for (int branch = StateBranch; branch != BranchesTotal; branch++)
+		for (int branch = StateBranch; branch != BranchesTotal; ++branch)
 			call_layers_part(great_part_names[branch], inputs[branch], tape);
 	}
 	auto&[value, advantage] = inputs;
