@@ -3,6 +3,7 @@
 
 #include <xtensor/views/xview.hpp>
 #include <xtensor/generators/xbuilder.hpp>
+#include <xtensor/core/xnoalias.hpp>
 
 namespace nn
 {
@@ -21,11 +22,11 @@ namespace nn
             for (std::size_t k = 0; k < outputs_shape[width_axis]; ++k)
             {
                 //conv is a part of input taken according to filters shape with a new axis added for broadcasting purposes
-                auto conv = xt::view(inputs, xt::all(), xt::newaxis(), xt::range(i, i + filters.shape()[height_axis]), 
+                auto conv = xt::view(inputs, xt::all(), xt::newaxis(), xt::range(i, i + filters.shape()[height_axis]),
                     xt::range(k, k + filters.shape()[width_axis]));
                 //after multiplying extra axes are removed, and the result is assigned to the appropriate position of the outputs
                 //in the end, filters number becomes a new channels number
-                xt::view(outputs, xt::all(), i, k) = xt::sum(conv * filters, { height_axis + 1,width_axis + 1,channels_axis + 1 });
+                xt::noalias(xt::view(outputs, xt::all(), i, k)) = xt::sum(conv * filters, { height_axis + 1,width_axis + 1,channels_axis + 1 });
             }
         return outputs;
     }

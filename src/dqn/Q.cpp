@@ -4,6 +4,7 @@
 #include <xtensor/views/xindex_view.hpp>
 #include <xtensor/misc/xsort.hpp>
 #include <xtensor/generators/xrandom.hpp>
+#include <xtensor/core/xnoalias.hpp>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -332,7 +333,7 @@ void dqn::Q::QPrivate::global_update()
 	const nn::TrainableVars local_trainable_vars = model_local.get_trainable_vars_fixed();
 	const nn::TrainableVars target_trainable_vars = model_target.get_trainable_vars_fixed();
 	for (std::size_t i = 0; i < target_trainable_vars.size(); ++i)
-		*target_trainable_vars[i] = *local_trainable_vars[i];
+		xt::noalias(*target_trainable_vars[i]) = *local_trainable_vars[i];
 	update_count = 0;
 }
 

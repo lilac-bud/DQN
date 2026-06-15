@@ -3,6 +3,7 @@
 
 #include <xtensor/views/xview.hpp>
 #include <xtensor/views/xindex_view.hpp>
+#include <xtensor/core/xnoalias.hpp>
 
 namespace nn
 {
@@ -27,7 +28,7 @@ namespace nn
 				//pool is a part of input taken according to pool size
 				auto pool = xt::view(inputs, xt::all(), xt::range(inputs_i, inputs_i + pool_height),
 					xt::range(inputs_k, inputs_k + pool_width));
-				xt::view(outputs, xt::all(), i, k) = xt::amax(pool, { height_axis, width_axis });
+				xt::noalias(xt::view(outputs, xt::all(), i, k)) = xt::amax(pool, { height_axis, width_axis });
 			}
 		}
 		return outputs;
