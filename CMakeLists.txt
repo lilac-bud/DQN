@@ -36,6 +36,10 @@ target_link_libraries(Q
 		neural_network
 )
 
+if(TEST_Q)
+	add_subdirectory(test)
+endif()
+
 include(GNUInstallDirs)
 
 install(

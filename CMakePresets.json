@@ -5,8 +5,20 @@
       "name": "dqn",
       "displayName": "DQN",
       "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "TEST_Q": "OFF"
+      }
+    },
+    {
+      "name": "dqn-test",
+      "displayName": "DQN Test",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "TEST_Q": "ON"
       }
     }
   ]
